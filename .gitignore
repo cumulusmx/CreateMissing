@@ -5,3 +5,10 @@
 /bin
 /obj
 /.vs
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+publish/
