@@ -23,7 +23,10 @@ namespace CreateMissing
 
 			if (File.Exists(dayFileName + ".sav"))
 			{
-				Console.WriteLine("The dayfile.txt backup file dayfile.txt.sav already exists, aborting to prevent overwriting the data");
+				Console.WriteLine("The dayfile.txt backup file dayfile.txt.sav already exists, aborting to prevent overwriting the original data.");
+				Console.WriteLine("Press any key to exit");
+				Console.ReadKey(true);
+				Console.WriteLine("Exiting...");
 				Environment.Exit(1);
 			}
 
@@ -83,6 +86,10 @@ namespace CreateMissing
 			else
 			{
 				Program.LogMessage("LoadDayFile: No Dayfile found - No entries added to recent daily data list");
+				// add a rcord for yesterday, just so we have something to process
+				var newRec = new Dayfilerec();
+				newRec.Date = DateTime.Today.AddDays(-1);
+				DayfileRecs.Add(newRec);
 			}
 		}
 
@@ -195,7 +202,10 @@ namespace CreateMissing
 			strb.Append(rec.HighPressTime.ToString("HH:mm") + listsep);
 			strb.Append(rec.HighRainRate.ToString(Program.cumulus.RainFormat) + listsep);
 			strb.Append(rec.HighRainRateTime.ToString("HH:mm") + listsep);
-			strb.Append(rec.TotalRain.ToString(Program.cumulus.RainFormat) + listsep);
+			if (rec.TotalRain == -9999)
+				strb.Append("0.0" + listsep);
+			else
+				strb.Append(rec.TotalRain.ToString(Program.cumulus.RainFormat) + listsep);
 			strb.Append(rec.AvgTemp.ToString(Program.cumulus.TempFormat) + listsep);
 			strb.Append(rec.WindRun.ToString("F1") + listsep);
 			strb.Append(rec.HighAvgWind.ToString(Program.cumulus.WindAvgFormat) + listsep);
@@ -287,16 +297,12 @@ namespace CreateMissing
 
 				if (st.Count > idx++ && int.TryParse(st[19], out varInt))
 					rec.LowHumidity = varInt;
-				else
-					rec.LowHumidity = 9999;
 
 				if (st.Count > idx++ && st[20].Length == 5)
 					rec.LowHumidityTime = GetDateTime(rec.Date, st[20]);
 
 				if (st.Count > idx++ && int.TryParse(st[21], out varInt))
 					rec.HighHumidity = varInt;
-				else
-					rec.HighHumidity = -9999;
 
 				if (st.Count > idx++ && st[22].Length == 5)
 					rec.HighHumidityTime = GetDateTime(rec.Date, st[22]);
@@ -309,24 +315,18 @@ namespace CreateMissing
 
 				if (st.Count > idx++ && double.TryParse(st[25], out varDbl))
 					rec.HighHeatIndex = varDbl;
-				else
-					rec.HighHeatIndex = -9999;
 
 				if (st.Count > idx++ && st[26].Length == 5)
 					rec.HighHeatIndexTime = GetDateTime(rec.Date, st[26]);
 
 				if (st.Count > idx++ && double.TryParse(st[27], out varDbl))
 					rec.HighAppTemp = varDbl;
-				else
-					rec.HighAppTemp = -9999;
 
 				if (st.Count > idx++ && st[28].Length == 5)
 					rec.HighAppTempTime = GetDateTime(rec.Date, st[28]);
 
 				if (st.Count > idx++ && double.TryParse(st[29], out varDbl))
 					rec.LowAppTemp = varDbl;
-				else
-					rec.LowAppTemp = 9999;
 
 				if (st.Count > idx++ && st[30].Length == 5)
 					rec.LowAppTempTime = GetDateTime(rec.Date, st[30]);
@@ -339,24 +339,18 @@ namespace CreateMissing
 
 				if (st.Count > idx++ && double.TryParse(st[33], out varDbl))
 					rec.LowWindChill = varDbl;
-				else
-					rec.LowWindChill = 9999;
 
 				if (st.Count > idx++ && st[34].Length == 5)
 					rec.LowWindChillTime = GetDateTime(rec.Date, st[34]);
 
 				if (st.Count > idx++ && double.TryParse(st[35], out varDbl))
 					rec.HighDewPoint = varDbl;
-				else
-					rec.HighDewPoint = -9999;
 
 				if (st.Count > idx++ && st[36].Length == 5)
 					rec.HighDewPointTime = GetDateTime(rec.Date, st[36]);
 
 				if (st.Count > idx++ && double.TryParse(st[37], out varDbl))
 					rec.LowDewPoint = varDbl;
-				else
-					rec.LowDewPoint = 9999;
 
 				if (st.Count > idx++ && st[38].Length == 5)
 					rec.LowDewPointTime = GetDateTime(rec.Date, st[38]);
@@ -384,24 +378,18 @@ namespace CreateMissing
 
 				if (st.Count > idx++ && double.TryParse(st[46], out varDbl))
 					rec.HighFeelsLike = varDbl;
-				else
-					rec.HighFeelsLike = -9999;
 
 				if (st.Count > idx++ && st[47].Length == 5)
 					rec.HighFeelsLikeTime = GetDateTime(rec.Date, st[47]);
 
 				if (st.Count > idx++ && double.TryParse(st[48], out varDbl))
 					rec.LowFeelsLike = varDbl;
-				else
-					rec.LowFeelsLike = 9999;
 
 				if (st.Count > idx++ && st[49].Length == 5)
 					rec.LowFeelsLikeTime = GetDateTime(rec.Date, st[49]);
 
 				if (st.Count > idx++ && double.TryParse(st[50], out varDbl))
 					rec.HighHumidex = varDbl;
-				else
-					rec.HighHumidex = -9999;
 
 				if (st.Count > idx++ && st[51].Length == 5)
 					rec.HighHumidexTime = GetDateTime(rec.Date, st[51]);
@@ -530,14 +518,14 @@ namespace CreateMissing
 			LowPress = 9999;
 			HighPress = -9999;
 			HighRainRate = -9999;
-			TotalRain = 0;
+			TotalRain = -9999;
 			AvgTemp = -9999;
-			WindRun = 0;
+			WindRun = -9999;
 			HighAvgWind = -9999;
 			LowHumidity = 9999;
 			HighHumidity = -9999;
-			ET = 0;
-			SunShineHours = 0;
+			ET = -9999;
+			SunShineHours = -9999;
 			HighHeatIndex = -9999;
 			HighAppTemp = -9999;
 			LowAppTemp = 9999;
@@ -548,8 +536,8 @@ namespace CreateMissing
 			DominantWindBearing = 9999;
 			HeatingDegreeDays = -9999;
 			CoolingDegreeDays = -9999;
-			HighSolar = 0;
-			HighUv = 0;
+			HighSolar = -9999;
+			HighUv = -9999;
 			HighFeelsLike = -9999;
 			LowFeelsLike = 9999;
 			HighHumidex = -9999;

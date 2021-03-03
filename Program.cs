@@ -15,12 +15,20 @@ namespace CreateMissing
 		private static string CurrentLogName;
 		private static int CurrentLogLineNum = 0;
 
+		private static int RecsAdded = 0;
+		private static int RecsUpdated = 0;
+		private static int RecsNoData = 0;
+		private static int RecsOK = 0;
+
 		static void Main(string[] args)
 		{
 
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener($"MXdiags{Path.DirectorySeparatorChar}CreateMissing-{DateTime.Now:yyyyMMdd-HHmmss}.txt", "CMlog");
 			Trace.Listeners.Add(myTextListener);
 			Trace.AutoFlush = true;
+
+			LogMessage("Processing started");
+			Console.WriteLine($"Processing started: {DateTime.Now:U}\n");
 
 			cumulus = new Cumulus();
 
@@ -29,11 +37,37 @@ namespace CreateMissing
 
 			// for each day since records began date
 			var currDate = DateTime.Parse(cumulus.RecordsBeganDate);
+			var dayfileStart = dayfile.DayfileRecs.Count > 0 ? dayfile.DayfileRecs[0].Date : DateTime.MaxValue;
 
-			// Sanity check
+			LogMessage($"First dayfile record: {dayfileStart:d}");
+			LogMessage($"Records Began Date  : {currDate:d}");
+			Console.WriteLine($"First dayfile record: {dayfileStart:d}");
+			Console.WriteLine($"Records Began Date  : {currDate:d}\n");
+
+			// Sanity check #1. Is the first date in the day file order than the records began date?
+			if (dayfileStart < currDate)
+			{
+				LogMessage($"The first dayfile record ({dayfileStart:d}) is older than the records began date ({currDate:d}), using that date");
+				Console.WriteLine($"The first dayfile record ({dayfileStart:d}) is older than the records began date ({currDate:d}), using that date");
+				currDate = dayfileStart;
+			}
+
+			if (!GetUserConfirmation($"This will attempt to create/update your day file records from {currDate:D}. Continue? [Y/N]: "))
+			{
+				Console.WriteLine("Exiting...");
+				Environment.Exit(1);
+			}
+			Console.WriteLine();
+
+			// Sanity check #2
 			if (currDate >= DateTime.Today)
 			{
-				Console.WriteLine("Records began date is today!???");
+				LogMessage("Start date is today!???");
+				Console.WriteLine("Start date is today!???");
+				Console.WriteLine("Press any key to exit");
+				Console.ReadKey(true);
+				Console.WriteLine("Exiting...");
+
 				Environment.Exit(1);
 			}
 
@@ -59,11 +93,13 @@ namespace CreateMissing
 						{
 							LogMessage($"Date: {currDate:d} : No monthly data was found, not creating a record");
 							Console.WriteLine($"\nDate: {currDate:d} : No monthly data was found, not creating a record");
+							RecsNoData++;
 						}
 						else
 						{
 							dayfile.DayfileRecs.Insert(i, newRec);
 							Console.WriteLine(" done.");
+							RecsAdded++;
 							i++;
 						}
 
@@ -86,25 +122,57 @@ namespace CreateMissing
 					if (dayfile.DayfileRecs[i].HasMissingData())
 					{
 						AddMissingData(i, currDate);
+						RecsUpdated++;
 					}
 					else
 					{
 						LogMessage($"Date: {currDate:d} : Entry is OK");
 						Console.WriteLine($"Date: {currDate:d} : Entry is OK");
+						RecsOK++;
 					}
 				}
 
 				currDate = IncrementMeteoDate(currDate);
+
+				if (currDate >= DateTime.Today)
+				{
+					// We don't do the future!
+					break;
+				}
 			}
 
 			// create the new dayfile.txt with a different name
 			LogMessage("Saving new dayfile.txt");
-			Console.WriteLine("Saving new dayfile.txt");
+			Console.WriteLine("\nSaving new dayfile.txt");
 
 			dayfile.WriteDayFile();
 
 			LogMessage("Created new dayfile.txt, the old is saved as dayfile.txt.sav");
-			Console.WriteLine("Created new dayfile.txt, the old is saved as dayfile.txt.sav");
+			Console.WriteLine("Created new dayfile.txt, the original file has been saved as dayfile.txt.sav");
+
+			LogMessage($"Number of records added  : {RecsAdded}");
+			LogMessage($"Number of records updated: {RecsUpdated}");
+			LogMessage($"Number of records No Data: {RecsNoData}");
+			LogMessage($"Number of records that were OK: {RecsOK}");
+
+			Console.WriteLine($"\nNumber of records processed: {RecsAdded + RecsUpdated + RecsNoData + RecsOK}");
+			Console.WriteLine($"  Added  : {RecsAdded}");
+			Console.WriteLine($"  Updated: {RecsUpdated}");
+			Console.Write($"  No Data: {RecsNoData}");
+			if (RecsNoData > 0)
+			{
+				Console.WriteLine(" - please check the log file for the errors");
+			}
+			else
+			{
+				Console.WriteLine();
+			}
+			Console.WriteLine($"  Were OK: {RecsOK}");
+
+			LogMessage("\nProcessing complete.");
+			Console.WriteLine("\n\nProcessing complete.");
+			Console.WriteLine("Press any key to exit");
+			Console.ReadKey(true);
 		}
 
 		public static void LogMessage(string message)
@@ -114,19 +182,32 @@ namespace CreateMissing
 
 		private static Dayfilerec GetDayRec(DateTime date)
 		{
-			// get the monthly log file name
-			var fileName = GetLogFileName(date);
 			var rec = new Dayfilerec();
 			var started = false;
 			var finished = false;
 			var fileDate = date;
 			var recCount = 0;
 
+			var solarCurrRec = 0;
+
 			var lastentrydate = DateTime.MinValue;
 			double lasttempvalue = 0;
 
 			var startTime = date;
 			var endTime = IncrementMeteoDate(date);
+			var solarStartTime = startTime;
+			var solarEndTime = endTime;
+
+			// total sunshine is a pain for meteo days starting at 09:00 becuase we need to total to midnight only
+			// starting at 00:01 on the meteo day
+			if (startTime.Hour != 0)
+			{
+				solarStartTime = startTime.Date;
+				solarEndTime = solarStartTime.AddDays(1);
+			}
+
+			// get the monthly log file name
+			var fileName = GetLogFileName(date);
 
 			List<LastHourData> LastHourDataList = new List<LastHourData>();
 
@@ -199,10 +280,38 @@ namespace CreateMissing
 							// same meto day, or first record of the next day
 							// we want data from 00:00/09:00 to 00:00/09:00
 							// but next day 00:00/09:00 values are only used for summation functions
+							// Solar for 9am days is 00:00 the previous day to midnight the current day!
+							if (solarStartTime != startTime && entrydate >= solarStartTime && entrydate <= solarEndTime)
+							{
+								// we are just getting the solar values to midnight
+								// hours of sunshine
+								if (st.Count > 23 && double.TryParse(st[23], out valDbl) && valDbl > rec.SunShineHours)
+								{
+									rec.SunShineHours = valDbl;
+								}
+								// hi UV-I
+								if (st.Count > 17 && double.TryParse(st[17], out valDbl) && valDbl > rec.HighUv)
+								{
+									rec.HighUv = valDbl;
+									rec.HighUvTime = entrydate;
+								}
+								// hi solar
+								if (st.Count > 18 && int.TryParse(st[18], out valInt) && valInt > rec.HighSolar)
+								{
+									rec.HighSolar = valInt;
+									rec.HighSolarTime = entrydate;
+								}
+								// ET
+								if (st.Count > 19 && double.TryParse(st[18], out valDbl) && valDbl > rec.ET)
+								{
+									rec.ET = valDbl;
+								}
+								solarCurrRec = CurrentLogLineNum;
+							}
+
 							if (entrydate >= startTime && entrydate <= endTime)
 							{
 								recCount++;
-
 								var outsidetemp = double.Parse(st[2]);
 								var hum = int.Parse(st[3]);
 								var dewpoint = double.Parse(st[4]);
@@ -218,6 +327,7 @@ namespace CreateMissing
 								{
 									lasttempvalue = outsidetemp;
 									lastentrydate = entrydate;
+									rec.WindRun = 0;
 									started = true;
 								}
 
@@ -251,23 +361,6 @@ namespace CreateMissing
 										rec.HighHeatIndex = valDbl;
 										rec.HighHeatIndexTime = entrydate;
 									}
-									// hi UV-I
-									if (st.Count > 17 && double.TryParse(st[17], out valDbl) && valDbl > rec.HighUv)
-									{
-										rec.HighUv = valDbl;
-										rec.HighUvTime = entrydate;
-									}
-									// hi solar
-									if (st.Count > 18 && int.TryParse(st[18], out valInt) && valInt > rec.HighSolar)
-									{
-										rec.HighSolar = valInt;
-										rec.HighSolarTime = entrydate;
-									}
-									// ET
-									if (st.Count > 19 && double.TryParse(st[18], out valDbl) && valDbl > rec.ET)
-									{
-										rec.ET = valDbl;
-									}
 									// hi/low appt
 									if (st.Count > 21 && double.TryParse(st[21], out valDbl))
 									{
@@ -298,10 +391,31 @@ namespace CreateMissing
 										}
 									}
 
-									// hours of sunshine
-									if (st.Count > 23 && double.TryParse(st[23], out valDbl) && valDbl > rec.SunShineHours)
+									// only do this here if we have a met day starting at midnight
+									if (solarStartTime == startTime)
 									{
-										rec.SunShineHours = valDbl;
+										// hi UV-I
+										if (st.Count > 17 && double.TryParse(st[17], out valDbl) && valDbl > rec.HighUv)
+										{
+											rec.HighUv = valDbl;
+											rec.HighUvTime = entrydate;
+										}
+										// hi solar
+										if (st.Count > 18 && int.TryParse(st[18], out valInt) && valInt > rec.HighSolar)
+										{
+											rec.HighSolar = valInt;
+											rec.HighSolarTime = entrydate;
+										}
+										// ET
+										if (st.Count > 19 && double.TryParse(st[18], out valDbl) && valDbl > rec.ET)
+										{
+											rec.ET = valDbl;
+										}
+										// hours of sunshine
+										if (st.Count > 23 && double.TryParse(st[23], out valDbl) && valDbl > rec.SunShineHours)
+										{
+											rec.SunShineHours = valDbl;
+										}
 									}
 
 									// hi/low feels like
@@ -530,7 +644,6 @@ namespace CreateMissing
 										}
 									}
 								}
-
 							}
 							else if (started && recCount > 2) // need at least three records to create a day
 							{
@@ -540,24 +653,23 @@ namespace CreateMissing
 
 								// calc dominant wind direction for the day
 								rec.DominantWindBearing = Utils.CalcAvgBearing(totalwinddirX, totalwinddirY);
-								// if no rain, set high hourly to a sensible value
-								if (rec.HighHourlyRain == -9999)
-								{
-									rec.HighHourlyRain = 0;
-								}
-								// heating/cooling degree days
-								if (rec.HeatingDegreeDays == -9999)
-								{
-									rec.HeatingDegreeDays = 0;
-								}
-								if (rec.CoolingDegreeDays == -9999)
-								{
-									rec.CoolingDegreeDays = 0;
-								}
+
+								// fill in any missing data with defaults
+								if (rec.ET == -9999) rec.ET = 0;
+								if (rec.SunShineHours == -9999) rec.SunShineHours = 0;
+								if (rec.HighSolar == -9999) rec.HighSolar = 0;
+								if (rec.HighUv == -9999) rec.HighUv = 0;
+								if (rec.HighHourlyRain == -9999) rec.HighHourlyRain = 0;
+								if (rec.HeatingDegreeDays == -9999) rec.HeatingDegreeDays = 0;
+								if (rec.CoolingDegreeDays == -9999) rec.CoolingDegreeDays = 0;
 
 								lastentrydate = entrydate;
 
-								if (CurrentLogLineNum > 0)
+								if (solarStartTime != startTime)
+								{
+									CurrentLogLineNum = solarCurrRec;
+								}
+								else if (CurrentLogLineNum > 0)
 								{
 									CurrentLogLineNum--;
 								}
@@ -567,7 +679,11 @@ namespace CreateMissing
 							else if (started && recCount <= 2)
 							{
 								// Oh dear, we have done the day and only have 1 or 2 records
-								if (CurrentLogLineNum > 0)
+								if (solarStartTime != startTime)
+								{
+									CurrentLogLineNum = solarCurrRec;
+								}
+								else if (CurrentLogLineNum > 0)
 								{
 									CurrentLogLineNum--;
 								}
@@ -666,9 +782,17 @@ namespace CreateMissing
 				dayfile.DayfileRecs[idx].HighRainRate = newRec.HighRainRate;
 				dayfile.DayfileRecs[idx].HighRainRateTime = newRec.HighRainRateTime;
 			}
+			if (dayfile.DayfileRecs[idx].TotalRain == -9999)
+			{
+				dayfile.DayfileRecs[idx].TotalRain = newRec.TotalRain;
+			}
 			if (dayfile.DayfileRecs[idx].AvgTemp == -9999)
 			{
 				dayfile.DayfileRecs[idx].AvgTemp = newRec.AvgTemp;
+			}
+			if (dayfile.DayfileRecs[idx].WindRun == -9999)
+			{
+				dayfile.DayfileRecs[idx].WindRun = newRec.WindRun;
 			}
 			if (dayfile.DayfileRecs[idx].HighAvgWind == -9999)
 			{
@@ -684,6 +808,14 @@ namespace CreateMissing
 			{
 				dayfile.DayfileRecs[idx].HighHumidity = newRec.HighHumidity;
 				dayfile.DayfileRecs[idx].HighHumidityTime = newRec.HighHumidityTime;
+			}
+			if (dayfile.DayfileRecs[idx].ET == -9999)
+			{
+				dayfile.DayfileRecs[idx].ET = newRec.ET;
+			}
+			if (dayfile.DayfileRecs[idx].SunShineHours == -9999)
+			{
+				dayfile.DayfileRecs[idx].SunShineHours = newRec.SunShineHours;
 			}
 			if (dayfile.DayfileRecs[idx].HighHeatIndex == -9999)
 			{
@@ -731,6 +863,14 @@ namespace CreateMissing
 			if (dayfile.DayfileRecs[idx].CoolingDegreeDays == -9999)
 			{
 				dayfile.DayfileRecs[idx].CoolingDegreeDays = newRec.CoolingDegreeDays;
+			}
+			if (dayfile.DayfileRecs[idx].HighSolar == -9999)
+			{
+				dayfile.DayfileRecs[idx].HighSolar = newRec.HighSolar;
+			}
+			if (dayfile.DayfileRecs[idx].HighUv == -9999)
+			{
+				dayfile.DayfileRecs[idx].HighUv = newRec.HighUv;
 			}
 			if (dayfile.DayfileRecs[idx].HighHumidex == -9999)
 			{
@@ -790,6 +930,23 @@ namespace CreateMissing
 		private static DateTime IncrementMeteoDate(DateTime thedate)
 		{
 			return SetStartTime(thedate.AddDays(1));
+		}
+
+		private static bool GetUserConfirmation(string msg)
+		{
+			do
+			{
+				while (Console.KeyAvailable)
+					Console.ReadKey();
+
+				Console.Write(msg);
+				var resp = Console.ReadKey().Key;
+				Console.WriteLine();
+
+				if (resp == ConsoleKey.Y) return true;
+				if (resp == ConsoleKey.N) return false;
+			} while (true);
+
 		}
 	}
 

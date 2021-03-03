@@ -56,7 +56,7 @@ namespace CreateMissing
 			{
 				Program.LogMessage("Failed to find Cumulus.ini file!");
 				Console.WriteLine("Failed to find Cumulus.ini file!");
-				 Environment.Exit(1);
+				Environment.Exit(1);
 			}
 
 			Program.LogMessage("Reading Cumulus.ini file");
