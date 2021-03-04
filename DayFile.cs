@@ -86,7 +86,8 @@ namespace CreateMissing
 			else
 			{
 				Program.LogMessage("LoadDayFile: No Dayfile found - No entries added to recent daily data list");
-				// add a rcord for yesterday, just so we have something to process
+				// add a rcord for yesterday, just so we have something to process,
+				// if it is left at default we will not write it out
 				var newRec = new Dayfilerec();
 				newRec.Date = DateTime.Today.AddDays(-1);
 				DayfileRecs.Add(newRec);
@@ -111,7 +112,14 @@ namespace CreateMissing
 
 					foreach (var rec in DayfileRecs)
 					{
-						file.WriteLine(RecToCsv(rec));
+						if (rec.HasMissingData())
+						{
+							Program.LogMessage($"Skipping day: {rec.Date.ToString("dd/MM/yy")} - missing data");
+						}
+						else
+						{
+							file.WriteLine(RecToCsv(rec));
+						}
 					}
 
 					file.Close();
