@@ -5,7 +5,7 @@ A utility to create and update missing entries in the Cumulus MX dayfile.txt fil
 The CreateMissing utility is a command program written in .Net Framework, so it will run on Windows or Linux. Under Linux you will have to use the mono runtime environment to execute the program.
 
 The utility will read your monthly log files and your dayfile.txt (if it exists). It will then compare the data:
-* If a day is missing from your dayfile, but present in your monhtly logs, it will create a new dayfile record for you.
+* If a day is missing from your dayfile, but present in your monthly logs, it will create a new dayfile record for you.
 * If a day has missing data - it may have been created with a old version of Cumulus - then it add those missing bits of data to the existing day record.
 
 What it will not do is update existing data within a day record. This is deliberate, many people edit bad data in their dayfile, but do not amend the corresponding data in the monthly log file. You do not want all your edits being overwritten by bad data again.
