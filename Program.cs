@@ -93,7 +93,7 @@ namespace CreateMissing
 						LogMessage($"Date: {currDate:d} : Creating missing day entry ... ");
 						Console.Write($"Date: {currDate:d} : Creating missing day entry ... ");
 
-						var newRec = GetDayRec(currDate);
+						var newRec = GetDayRecFromMonthly(currDate);
 						if (newRec == null)
 						{
 							LogMessage($"Date: {currDate:d} : No monthly data was found, not creating a record");
@@ -184,7 +184,7 @@ namespace CreateMissing
 			Trace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + message);
 		}
 
-		private static Dayfilerec GetDayRec(DateTime date)
+		private static Dayfilerec GetDayRecFromMonthly(DateTime date)
 		{
 			var rec = new Dayfilerec()
 			{
@@ -300,15 +300,11 @@ namespace CreateMissing
 							// we want data from 00:00/09:00 to 00:00/09:00
 							// but next day 00:00/09:00 values are only used for summation functions
 							// Solar for 9am days is 00:00 the previous day to midnight the current day!
-							if (solarStartTime != startTime && entrydate >= solarStartTime && entrydate <= solarEndTime)
+							if (entrydate >= solarStartTime && entrydate <= solarEndTime)
 							{
 								// we are just getting the solar values to midnight
 								ExtractSolarData(st, ref rec, entrydate);
 								solarCurrRec = CurrentLogLineNum;
-							}
-							else if (solarStartTime == startTime)
-							{
-								ExtractSolarData(st, ref rec, entrydate);
 							}
 
 							if (entrydate >= startTime && entrydate <= endTime)
@@ -651,7 +647,7 @@ namespace CreateMissing
 									}
 								}
 							}
-							else if (started && recCount > 2) // need at least three records to create a day
+							else if (started && recCount >= 5) // need at least five records to create a day
 							{
 								// we were in the right day, now we aren't
 								// calc average temp for the day, edge case we only have one record, in which case the totals will be zero, use hi or lo temp, they will be the same!
@@ -673,9 +669,9 @@ namespace CreateMissing
 
 								return rec;
 							}
-							else if (started && recCount <= 2)
+							else if (started && recCount <= 5)
 							{
-								// Oh dear, we have done the day and only have 1 or 2 records
+								// Oh dear, we have done the day and have less than five records
 								if (solarStartTime != startTime)
 								{
 									CurrentLogLineNum = solarCurrRec;
@@ -700,9 +696,9 @@ namespace CreateMissing
 					}
 					catch (Exception e)
 					{
-						LogMessage($"Error at line {CurrentLogLineNum + 1}, field {idx} of {fileName} : {e.Message}");
+						LogMessage($"Error at line {CurrentLogLineNum + 1}, field {idx + 1} of {fileName} : {e.Message}");
 						LogMessage("Please edit the file to correct the error");
-						Console.WriteLine($"Error at line {CurrentLogLineNum + 1}, field {idx} of {fileName} : {e.Message}");
+						Console.WriteLine($"Error at line {CurrentLogLineNum + 1}, field {idx + 1} of {fileName} : {e.Message}");
 						Console.WriteLine("Please edit the file to correct the error");
 
 						Environment.Exit(1);
@@ -750,7 +746,7 @@ namespace CreateMissing
 			LogMessage($"{metDate:d} : Adding missing data");
 			Console.Write($"{metDate:d} : Adding missing data ... ");
 			// Extract all the data from the log file
-			var newRec = GetDayRec(metDate);
+			var newRec = GetDayRecFromMonthly(metDate);
 
 			if (newRec == null)
 			{
