@@ -20,7 +20,7 @@ namespace CreateMissing
 		private static int RecsNoData = 0;
 		private static int RecsOK = 0;
 
-		static void Main(string[] args)
+		static void Main()
 		{
 
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener($"MXdiags{Path.DirectorySeparatorChar}CreateMissing-{DateTime.Now:yyyyMMdd-HHmmss}.txt", "CMlog");
@@ -541,13 +541,11 @@ namespace CreateMissing
 										rec.HighRainRate = rainrate;
 										rec.HighRainRateTime = entrydate;
 									}
-									// total rain
-									if (raintoday > rec.TotalRain)
-									{
-										rec.TotalRain = raintoday;
-									}
+									// total rain - just take the last value - the user may have edited the value during the day
+									rec.TotalRain = raintoday;
+
 									// add last hour rain
-									if (raintoday > 0)
+									if (entrydate != startTime && raintoday > 0)
 									{
 										LastHourDataList.Add(new LastHourData(entrydate, raintoday));
 									}
