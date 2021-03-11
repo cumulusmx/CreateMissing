@@ -1,0 +1,11 @@
+1.0.2
+—————
+- Fix: Sunshine hours always logged in the day file as zero when using a 9am meteo day
+
+1.0.1
+—————
+- Fix: Improved the daily rainfall total calculation
+
+1.0.0
+—————
+The initial release

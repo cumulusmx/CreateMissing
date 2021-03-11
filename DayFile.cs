@@ -223,17 +223,7 @@ namespace CreateMissing
 			strb.Append(rec.HighHumidity + listsep);
 			strb.Append(rec.HighHumidityTime.ToString("HH:mm") + listsep);
 			strb.Append(rec.ET.ToString(Program.cumulus.ETFormat) + listsep);
-			if (Program.cumulus.RolloverHour == 0)
-			{
-				// use existing current sunshinehour count
-				strb.Append(rec.SunShineHours.ToString(Program.cumulus.SunFormat) + listsep);
-			}
-			else
-			{
-				// for non-midnight rollover, use new item
-				//strb.Append(Monthly.SunshineToMidnight.ToString(Program.cumulus.SunFormat) + listsep);
-				strb.Append("0" + listsep);
-			}
+			strb.Append(rec.SunShineHours.ToString(Program.cumulus.SunFormat) + listsep);
 			strb.Append(rec.HighHeatIndex.ToString(Program.cumulus.TempFormat) + listsep);
 			strb.Append(rec.HighHeatIndexTime.ToString("HH:mm") + listsep);
 			strb.Append(rec.HighAppTemp.ToString(Program.cumulus.TempFormat) + listsep);
