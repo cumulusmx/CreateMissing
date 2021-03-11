@@ -43,6 +43,7 @@ namespace CreateMissing
 			// for each day since records began date
 			var currDate = DateTime.Parse(cumulus.RecordsBeganDate);
 			var dayfileStart = dayfile.DayfileRecs.Count > 0 ? dayfile.DayfileRecs[0].Date : DateTime.MaxValue;
+			var endDate = SetStartTime(DateTime.Now.AddDays(-1).Date);
 
 			LogMessage($"First dayfile record: {dayfileStart:d}");
 			LogMessage($"Records Began Date  : {currDate:d}");
@@ -143,6 +144,30 @@ namespace CreateMissing
 					// We don't do the future!
 					break;
 				}
+			}
+
+			currDate = IncrementMeteoDate(dayfile.DayfileRecs[dayfile.DayfileRecs.Count - 1].Date);
+
+			// that is the dayfile processed, but what it it had missing records at the end?
+			while (currDate <= endDate)
+			{
+				LogMessage($"Date: {currDate:d} : Creating missing day entry ... ");
+				Console.Write($"Date: {currDate:d} : Creating missing day entry ... ");
+
+				var newRec = GetDayRecFromMonthly(currDate);
+				if (newRec == null)
+				{
+					LogMessage($"Date: {currDate:d} : No monthly data was found, not creating a record");
+					Console.WriteLine($"\nDate: {currDate:d} : No monthly data was found, not creating a record");
+					RecsNoData++;
+				}
+				else
+				{
+					dayfile.DayfileRecs.Add(newRec);
+					Console.WriteLine(" done.");
+					RecsAdded++;
+				}
+				currDate = IncrementMeteoDate(currDate);
 			}
 
 			// create the new dayfile.txt with a different name
@@ -300,7 +325,7 @@ namespace CreateMissing
 							// we want data from 00:00/09:00 to 00:00/09:00
 							// but next day 00:00/09:00 values are only used for summation functions
 							// Solar for 9am days is 00:00 the previous day to midnight the current day!
-							if (entrydate >= solarStartTime && entrydate <= solarEndTime)
+							if (entrydate > solarStartTime && entrydate <= solarEndTime)
 							{
 								// we are just getting the solar values to midnight
 								ExtractSolarData(st, ref rec, entrydate);
@@ -741,8 +766,8 @@ namespace CreateMissing
 
 		private static void AddMissingData(int idx, DateTime metDate)
 		{
-			LogMessage($"{metDate:d} : Adding missing data");
-			Console.Write($"{metDate:d} : Adding missing data ... ");
+			LogMessage($"Date: { metDate:d} : Adding missing data");
+			Console.Write($"Date: {metDate:d} : Adding missing data ... ");
 			// Extract all the data from the log file
 			var newRec = GetDayRecFromMonthly(metDate);
 
