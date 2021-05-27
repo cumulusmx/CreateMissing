@@ -32,7 +32,7 @@ namespace CreateMissing
 				case 1:
 					return wind * 1.609344;
 				// kph
-				case 2: 
+				case 2:
 					return wind;
 				// knots
 				case 3:
@@ -59,7 +59,6 @@ namespace CreateMissing
 			};
 		}
 
-
 		public static int CalcAvgBearing(double x, double y)
 		{
 			var avg = 90 - (int)(180 / Math.PI * Math.Atan2(y, x));
@@ -70,7 +69,5 @@ namespace CreateMissing
 
 			return avg;
 		}
-
-
 	}
 }

@@ -250,7 +250,8 @@ namespace CreateMissing
 			strb.Append(rec.LowFeelsLike.ToString(Program.cumulus.TempFormat) + listsep);
 			strb.Append(rec.LowFeelsLikeTime.ToString("HH:mm") + listsep);
 			strb.Append(rec.HighHumidex.ToString(Program.cumulus.TempFormat) + listsep);
-			strb.Append(rec.HighHumidexTime.ToString("HH:mm"));
+			strb.Append(rec.HighHumidexTime.ToString("HH:mm") + listsep);
+			strb.Append(rec.ChillHours.ToString("F1"));
 
 			Program.LogMessage("Dayfile.txt Added: " + datestring);
 
@@ -391,6 +392,9 @@ namespace CreateMissing
 
 				if (st.Count > idx++ && st[51].Length == 5)
 					rec.HighHumidexTime = GetDateTime(rec.Date, st[51]);
+
+				if (st.Count > idx++ && double.TryParse(st[52], out varDbl))
+					rec.ChillHours = varDbl;
 			}
 			catch (Exception ex)
 			{
@@ -506,6 +510,7 @@ namespace CreateMissing
 		public DateTime LowFeelsLikeTime;
 		public double HighHumidex;
 		public DateTime HighHumidexTime;
+		public double ChillHours;
 
 		public Dayfilerec()
 		{
@@ -539,6 +544,7 @@ namespace CreateMissing
 			HighFeelsLike = -9999;
 			LowFeelsLike = 9999;
 			HighHumidex = -9999;
+			ChillHours = -9999;
 		}
 
 		public bool HasMissingData()
@@ -547,7 +553,7 @@ namespace CreateMissing
 				DominantWindBearing == 9999 || LowDewPoint == 9999 || HighDewPoint == -9999 || LowWindChill == 9999 || HighHourlyRain == -9999 ||
 				LowAppTemp == 9999 || HighAppTemp == -9999 || HighHeatIndex == -9999 || HighHumidity == -9999 || LowHumidity == 9999 ||
 				HighAvgWind == -9999 || AvgTemp == -9999 || HighRainRate == -9999 || LowPress == 9999 || HighPress == -9999 ||
-				HighTemp == -9999 || LowTemp == 9999 || HighGust == -9999
+				HighTemp == -9999 || LowTemp == 9999 || HighGust == -9999 || ChillHours == -9999
 			)
 			{
 				return true;
