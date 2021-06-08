@@ -340,6 +340,13 @@ namespace CreateMissing
 			{
 				if (File.Exists(fileName))
 				{
+					// Have we determined the line endings for dayfile.txt yet?
+					if (dayfile.LineEnding == string.Empty)
+					{
+						Utils.TryDetectNewLine(fileName, out dayfile.LineEnding);
+					}
+
+
 					try
 					{
 						if (CurrentLogName != fileName)

@@ -14,6 +14,7 @@ namespace CreateMissing
 	{
 		public List<Dayfilerec> DayfileRecs = new List<Dayfilerec>();
 
+		public string LineEnding = string.Empty;
 
 		private string dayFileName = "data" + Path.DirectorySeparatorChar + "dayfile.txt";
 
@@ -43,6 +44,12 @@ namespace CreateMissing
 			{
 				int linenum = 0;
 				int errorCount = 0;
+
+				// determine dayfile line ending
+				if (Utils.TryDetectNewLine(dayFileName, out string lineend))
+				{
+					LineEnding = lineend;
+				}
 
 				// Clear the existing list
 				DayfileRecs.Clear();
@@ -109,6 +116,8 @@ namespace CreateMissing
 				using (StreamWriter file = new StreamWriter(fs))
 				{
 					Program.LogMessage("Dayfile.txt opened for writing");
+
+					file.NewLine = LineEnding;
 
 					foreach (var rec in DayfileRecs)
 					{

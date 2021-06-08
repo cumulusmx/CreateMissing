@@ -1,6 +1,7 @@
 ﻿using CumulusMX;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace CreateMissing
@@ -68,6 +69,36 @@ namespace CreateMissing
 			}
 
 			return avg;
+		}
+
+		public static bool TryDetectNewLine(string path, out string newLine)
+		{
+			using (var fs = File.OpenRead(path))
+			{
+				char prevChar = '\0';
+
+				// read the first 1000 characters to try and find a newLine
+				for (var i = 0; i < 1000; i++)
+				{
+					int b;
+					if ((b = fs.ReadByte()) == -1)
+						break;
+
+					char curChar = (char)b;
+
+					if (curChar == '\n')
+					{
+						newLine = prevChar == '\r' ? "\r\n" : "\n";
+						return true;
+					}
+
+					prevChar = curChar;
+				}
+
+				// Returning false means could not determine linefeed convention
+				newLine = Environment.NewLine;
+				return false;
+			}
 		}
 	}
 }
