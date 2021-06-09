@@ -96,7 +96,12 @@ namespace CreateMissing
 					}
 					else
 					{
+						// use whatever we have in the dayfile
 						TotalChillHours = dayfile.DayfileRecs[i].ChillHours;
+
+						// unless we don't have anything, then start at zero
+						if (TotalChillHours == -9999)
+							TotalChillHours = 0;
 					}
 
 					while (dayfile.DayfileRecs[i].Date > currDate)
