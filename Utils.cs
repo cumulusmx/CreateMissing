@@ -1,6 +1,7 @@
 ﻿using CumulusMX;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace CreateMissing
@@ -32,7 +33,7 @@ namespace CreateMissing
 				case 1:
 					return wind * 1.609344;
 				// kph
-				case 2: 
+				case 2:
 					return wind;
 				// knots
 				case 3:
@@ -59,7 +60,6 @@ namespace CreateMissing
 			};
 		}
 
-
 		public static int CalcAvgBearing(double x, double y)
 		{
 			var avg = 90 - (int)(180 / Math.PI * Math.Atan2(y, x));
@@ -71,6 +71,34 @@ namespace CreateMissing
 			return avg;
 		}
 
+		public static bool TryDetectNewLine(string path, out string newLine)
+		{
+			using (var fs = File.OpenRead(path))
+			{
+				char prevChar = '\0';
 
+				// read the first 1000 characters to try and find a newLine
+				for (var i = 0; i < 1000; i++)
+				{
+					int b;
+					if ((b = fs.ReadByte()) == -1)
+						break;
+
+					char curChar = (char)b;
+
+					if (curChar == '\n')
+					{
+						newLine = prevChar == '\r' ? "\r\n" : "\n";
+						return true;
+					}
+
+					prevChar = curChar;
+				}
+
+				// Returning false means could not determine linefeed convention
+				newLine = Environment.NewLine;
+				return false;
+			}
+		}
 	}
 }

@@ -25,6 +25,9 @@ namespace CreateMissing
 		public double NOAAheatingthreshold;
 		public double NOAAcoolingthreshold;
 
+		public int ChillHourSeasonStart;
+		public double ChillHourThreshold;
+
 		private StationOptions StationOptions = new StationOptions();
 		internal StationUnits Units = new StationUnits();
 		private int[] WindDPlaceDefaults = { 1, 0, 0, 0 }; // m/s, mph, km/h, knots
@@ -126,7 +129,14 @@ namespace CreateMissing
 				NOAAcoolingthreshold = Units.Temp == 0 ? 18.3 : 65;
 			}
 
-
+			ChillHourSeasonStart = ini.GetValue("Station", "ChillHourSeasonStart", 10);
+			if (ChillHourSeasonStart < 1 || ChillHourSeasonStart > 12)
+				ChillHourSeasonStart = 1;
+			ChillHourThreshold = ini.GetValue("Station", "ChillHourThreshold", -999.0);
+			if (ChillHourThreshold < -998)
+			{
+				ChillHourThreshold = Units.Temp == 0 ? 7 : 45;
+			}
 		}
 
 	}

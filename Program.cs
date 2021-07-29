@@ -20,6 +20,8 @@ namespace CreateMissing
 		private static int RecsNoData = 0;
 		private static int RecsOK = 0;
 
+		private static double TotalChillHours;
+
 		static void Main()
 		{
 
@@ -86,6 +88,22 @@ namespace CreateMissing
 				// check if the day record exists in the day file?
 				if (dayfile.DayfileRecs[i].Date > currDate)
 				{
+					// Extract the Total Chill Hours from the last record we have to continue incrementing it
+					// First check if total chill hours needs to be reset
+					if (currDate.Month == cumulus.ChillHourSeasonStart && currDate.Day == 1)
+					{
+						TotalChillHours = 0;
+					}
+					else
+					{
+						// use whatever we have in the dayfile
+						TotalChillHours = dayfile.DayfileRecs[i].ChillHours;
+
+						// unless we don't have anything, then start at zero
+						if (TotalChillHours == -9999)
+							TotalChillHours = 0;
+					}
+
 					while (dayfile.DayfileRecs[i].Date > currDate)
 					{
 						// if not step through the monthly log file(s) to recreate it
@@ -112,11 +130,19 @@ namespace CreateMissing
 
 						// step forward a day
 						currDate = IncrementMeteoDate(currDate);
+
+						// check if total chill hours needs to be reset
+						if (currDate.Month == cumulus.ChillHourSeasonStart && currDate.Day == 1)
+						{
+							TotalChillHours = 0;
+						}
+
 						// increment our index to allow for the newly inserted record
 						if (i >= dayfile.DayfileRecs.Count)
 						{
 							break;
 						}
+
 					}
 					// undo the last date increment in the while loop, it gets incremented in the main loop now
 					currDate = currDate.AddDays(-1);
@@ -139,6 +165,12 @@ namespace CreateMissing
 
 				currDate = IncrementMeteoDate(currDate);
 
+				// check if total chill hours needs to be reset
+				if (currDate.Month == cumulus.ChillHourSeasonStart && currDate.Day == 1)
+				{
+					TotalChillHours = 0;
+				}
+
 				if (currDate >= DateTime.Today)
 				{
 					// We don't do the future!
@@ -147,6 +179,16 @@ namespace CreateMissing
 			}
 
 			currDate = IncrementMeteoDate(dayfile.DayfileRecs[dayfile.DayfileRecs.Count - 1].Date);
+			// We need the last total chill hours to increment if there are missing records at the end of the day file
+			// check if total chill hours needs to be reset
+			if (currDate.Month == cumulus.ChillHourSeasonStart && currDate.Day == 1)
+			{
+				TotalChillHours = 0;
+			}
+			else
+			{
+				TotalChillHours = dayfile.DayfileRecs[dayfile.DayfileRecs.Count - 1].ChillHours;
+			}
 
 			// that is the dayfile processed, but what it it had missing records at the end?
 			while (currDate <= endDate)
@@ -168,6 +210,12 @@ namespace CreateMissing
 					RecsAdded++;
 				}
 				currDate = IncrementMeteoDate(currDate);
+
+				// check if total chill hours needs to be reset
+				if (currDate.Month == cumulus.ChillHourSeasonStart && currDate.Day == 1)
+				{
+					TotalChillHours = 0;
+				}
 			}
 
 			// create the new dayfile.txt with a different name
@@ -221,7 +269,8 @@ namespace CreateMissing
 				HeatingDegreeDays = 0,
 				CoolingDegreeDays = 0,
 				TotalRain = 0,
-				WindRun = 0
+				WindRun = 0,
+				ChillHours = 0
 			};
 			var started = false;
 			var finished = false;
@@ -296,6 +345,13 @@ namespace CreateMissing
 			{
 				if (File.Exists(fileName))
 				{
+					// Have we determined the line endings for dayfile.txt yet?
+					if (dayfile.LineEnding == string.Empty)
+					{
+						Utils.TryDetectNewLine(fileName, out dayfile.LineEnding);
+					}
+
+
 					try
 					{
 						if (CurrentLogName != fileName)
@@ -309,7 +365,6 @@ namespace CreateMissing
 						}
 						double valDbl;
 						int valInt;
-
 
 						while (CurrentLogLineNum < CurrentLogLines.Count)
 						{
@@ -605,6 +660,14 @@ namespace CreateMissing
 										rec.CoolingDegreeDays += (((outsidetemp - cumulus.NOAAcoolingthreshold) * intervalMins) / 1440);
 									}
 
+									// chill hours
+									if (outsidetemp < cumulus.ChillHourThreshold)
+									{
+										TotalChillHours += intervalMins / 60.0;
+									}
+									rec.ChillHours = TotalChillHours;
+
+
 									lasttempvalue = outsidetemp;
 								}
 								else // we are outside the time range of the current day
@@ -640,6 +703,13 @@ namespace CreateMissing
 										}
 										rec.CoolingDegreeDays += (((outsidetemp - cumulus.NOAAcoolingthreshold) * intervalMins) / 1440);
 									}
+
+									// chill hours
+									if (outsidetemp < cumulus.ChillHourThreshold)
+									{
+										TotalChillHours += intervalMins / 60.0;
+									}
+									rec.ChillHours = TotalChillHours;
 
 									// flag we are done with this record
 									finished = true;
@@ -916,6 +986,10 @@ namespace CreateMissing
 			{
 				dayfile.DayfileRecs[idx].LowFeelsLike = newRec.LowFeelsLike;
 				dayfile.DayfileRecs[idx].LowFeelsLikeTime = newRec.LowFeelsLikeTime;
+			}
+			if (dayfile.DayfileRecs[idx].ChillHours == -9999)
+			{
+				dayfile.DayfileRecs[idx].ChillHours = newRec.ChillHours;
 			}
 			Console.WriteLine("done.");
 			RecsUpdated++;
