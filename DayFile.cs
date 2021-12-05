@@ -15,6 +15,8 @@ namespace CreateMissing
 		public List<Dayfilerec> DayfileRecs = new List<Dayfilerec>();
 
 		public string LineEnding = string.Empty;
+		public string FieldSep = string.Empty;
+		public string DateSep = string.Empty;
 
 		private string dayFileName = "data" + Path.DirectorySeparatorChar + "dayfile.txt";
 
@@ -40,6 +42,7 @@ namespace CreateMissing
 			int addedEntries = 0;
 
 			Program.LogMessage($"LoadDayFile: Attempting to load the day file");
+			Console.WriteLine("Attempting to load the day file");
 			if (File.Exists(dayFileName))
 			{
 				int linenum = 0;
@@ -50,6 +53,8 @@ namespace CreateMissing
 				{
 					LineEnding = lineend;
 				}
+				// determine the dayfile field and date separators
+				Utils.GetLogFileSeparators(dayFileName, CultureInfo.CurrentCulture.TextInfo.ListSeparator, out FieldSep, out DateSep);
 
 				// Clear the existing list
 				DayfileRecs.Clear();
@@ -58,6 +63,7 @@ namespace CreateMissing
 				{
 					using (var sr = new StreamReader(dayFileName))
 					{
+						var lastDate = DateTime.MinValue;
 						do
 						{
 							try
@@ -66,7 +72,30 @@ namespace CreateMissing
 
 								linenum++;
 								string Line = sr.ReadLine();
-								DayfileRecs.Add(ParseDayFileRec(Line));
+								var newRec = ParseDayFileRec(Line);
+
+								// sanity check if this date is in sequence
+								if (newRec.Date < lastDate)
+								{
+									Program.LogMessage($"LoadDayFile: Error - Date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
+									Console.WriteLine($"\nError, date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
+									Environment.Exit(3);
+								}
+
+								// sanity check if this date has already been added
+								//var matches = DayfileRecs.Where(p => p.Date == newRec.Date).ToList();
+								// (matches.Count > 0)
+								//Since we now know the order is correct, we can do a simple date compare
+								if (newRec.Date == lastDate)
+								{
+									Program.LogMessage($"LoadDayFile: Error - Duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
+									Console.WriteLine($"\nError, duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
+									Environment.Exit(4);
+								}
+
+								DayfileRecs.Add(newRec);
+
+								lastDate = newRec.Date;
 
 								addedEntries++;
 							}
@@ -78,6 +107,9 @@ namespace CreateMissing
 								if (errorCount >= 20)
 								{
 									Program.LogMessage($"LoadDayFile: Too many errors reading {dayFileName} - aborting load of daily data");
+									Console.WriteLine($"Too many errors reading {dayFileName} - aborting load of daily data");
+									Console.WriteLine("Please see the log file for more details");
+									Environment.Exit(5);
 								}
 							}
 						} while (!(sr.EndOfStream || errorCount >= 20));
@@ -89,10 +121,12 @@ namespace CreateMissing
 					Program.LogMessage("Please edit the file to correct the error");
 				}
 				Program.LogMessage($"LoadDayFile: Loaded {addedEntries} entries to the daily data list");
+				Console.WriteLine($"Loaded {addedEntries} entries to the daily data list");
 			}
 			else
 			{
 				Program.LogMessage("LoadDayFile: No Dayfile found - No entries added to recent daily data list");
+				Console.WriteLine("No Dayfile found - No entries added to recent daily data list");
 				// add a rcord for yesterday, just so we have something to process,
 				// if it is left at default we will not write it out
 				var newRec = new Dayfilerec();
@@ -195,21 +229,21 @@ namespace CreateMissing
 			// 52  Low Humidex
 			// 53  Time of low Humidex
 
-			var listsep = CultureInfo.CurrentCulture.TextInfo.ListSeparator;
 
-			string datestring = rec.Date.ToString("dd/MM/yy"); ;
+			// Write the date back using the same separator as the source file
+			string datestring = rec.Date.ToString($"dd{DateSep}MM{DateSep}yy");
 			// NB this string is just for logging, the dayfile update code is further down
 			var strb = new StringBuilder(300);
-			strb.Append(datestring + listsep);
+			strb.Append(datestring + FieldSep);
 
 			if (rec.HighGust == -9999)
 				return null;
 				//strb.Append("0.0" + listsep + "0" + listsep + "00:00" + listsep);
 			else
 			{
-				strb.Append(rec.HighGust.ToString(Program.cumulus.WindFormat) + listsep);
-				strb.Append(rec.HighGustBearing + listsep);
-				strb.Append(rec.HighGustTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighGust.ToString(Program.cumulus.WindFormat) + FieldSep);
+				strb.Append(rec.HighGustBearing + FieldSep);
+				strb.Append(rec.HighGustTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.LowTemp == 9999)
@@ -217,8 +251,8 @@ namespace CreateMissing
 				//strb.Append("0.0" + listsep + "00:00" + listsep);
 			else
 			{
-				strb.Append(rec.LowTemp.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.LowTempTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.LowTemp.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.LowTempTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.HighTemp == -9999)
@@ -226,8 +260,8 @@ namespace CreateMissing
 				//strb.Append("0.0" + listsep + "00:00" + listsep);
 			else
 			{
-				strb.Append(rec.HighTemp.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.HighTempTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighTemp.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.HighTempTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.LowPress == 9999)
@@ -235,8 +269,8 @@ namespace CreateMissing
 				//strb.Append("0.0" + listsep + "00:00" + listsep);
 			else
 			{
-				strb.Append(rec.LowPress.ToString(Program.cumulus.PressFormat) + listsep);
-				strb.Append(rec.LowPressTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.LowPress.ToString(Program.cumulus.PressFormat) + FieldSep);
+				strb.Append(rec.LowPressTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.HighPress == -9999)
@@ -244,8 +278,8 @@ namespace CreateMissing
 				//strb.Append("0.0" + listsep + "00:00" + listsep);
 			else
 			{
-				strb.Append(rec.HighPress.ToString(Program.cumulus.PressFormat) + listsep);
-				strb.Append(rec.HighPressTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighPress.ToString(Program.cumulus.PressFormat) + FieldSep);
+				strb.Append(rec.HighPressTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.HighRainRate == -9999)
@@ -253,149 +287,149 @@ namespace CreateMissing
 				//strb.Append("0.0" + listsep + "00:00" + listsep);
 			else
 			{
-				strb.Append(rec.HighRainRate.ToString(Program.cumulus.RainFormat) + listsep);
-				strb.Append(rec.HighRainRateTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighRainRate.ToString(Program.cumulus.RainFormat) + FieldSep);
+				strb.Append(rec.HighRainRateTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.TotalRain == -9999)
 				return null;
 				//strb.Append("0.0" + listsep);
 			else
-				strb.Append(rec.TotalRain.ToString(Program.cumulus.RainFormat) + listsep);
+				strb.Append(rec.TotalRain.ToString(Program.cumulus.RainFormat) + FieldSep);
 
 			if (rec.AvgTemp == -9999)
-				strb.Append(listsep);
+				strb.Append(FieldSep);
 			else
-				strb.Append(rec.AvgTemp.ToString(Program.cumulus.TempFormat) + listsep);
+				strb.Append(rec.AvgTemp.ToString(Program.cumulus.TempFormat) + FieldSep);
 
 
-			strb.Append(rec.WindRun.ToString("F1") + listsep);
+			strb.Append(rec.WindRun.ToString("F1") + FieldSep);
 
 			if (rec.HighAvgWind == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.HighAvgWind.ToString(Program.cumulus.WindAvgFormat) + listsep);
-				strb.Append(rec.HighAvgWindTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighAvgWind.ToString(Program.cumulus.WindAvgFormat) + FieldSep);
+				strb.Append(rec.HighAvgWindTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.LowHumidity == 9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.LowHumidity + listsep);
-				strb.Append(rec.LowHumidityTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.LowHumidity + FieldSep);
+				strb.Append(rec.LowHumidityTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.HighHumidity == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.HighHumidity + listsep);
-				strb.Append(rec.HighHumidityTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighHumidity + FieldSep);
+				strb.Append(rec.HighHumidityTime.ToString("HH:mm") + FieldSep);
 			}
 
-			strb.Append(rec.ET.ToString(Program.cumulus.ETFormat) + listsep);
-			strb.Append(rec.SunShineHours.ToString(Program.cumulus.SunFormat) + listsep);
+			strb.Append(rec.ET.ToString(Program.cumulus.ETFormat) + FieldSep);
+			strb.Append(rec.SunShineHours.ToString(Program.cumulus.SunFormat) + FieldSep);
 
 			if (rec.HighHeatIndex == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.HighHeatIndex.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.HighHeatIndexTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighHeatIndex.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.HighHeatIndexTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.HighAppTemp == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.HighAppTemp.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.HighAppTempTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighAppTemp.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.HighAppTempTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.LowAppTemp == 9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.LowAppTemp.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.LowAppTempTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.LowAppTemp.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.LowAppTempTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.HighHourlyRain == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.HighHourlyRain.ToString(Program.cumulus.RainFormat) + listsep);
-				strb.Append(rec.HighHourlyRainTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighHourlyRain.ToString(Program.cumulus.RainFormat) + FieldSep);
+				strb.Append(rec.HighHourlyRainTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.LowWindChill == 9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.LowWindChill.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.LowWindChillTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.LowWindChill.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.LowWindChillTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.HighDewPoint == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.HighDewPoint.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.HighDewPointTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighDewPoint.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.HighDewPointTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.LowDewPoint == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.LowDewPoint.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.LowDewPointTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.LowDewPoint.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.LowDewPointTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.DominantWindBearing == 9999)
-				strb.Append(listsep);
+				strb.Append(FieldSep);
 			else
-				strb.Append(rec.DominantWindBearing + listsep);
+				strb.Append(rec.DominantWindBearing + FieldSep);
 
 			if (rec.HeatingDegreeDays == -9999)
-				strb.Append(listsep);
+				strb.Append(FieldSep);
 			else
-				strb.Append(rec.HeatingDegreeDays.ToString("F1") + listsep);
+				strb.Append(rec.HeatingDegreeDays.ToString("F1") + FieldSep);
 
 			if (rec.CoolingDegreeDays == -9999)
-				strb.Append(listsep);
+				strb.Append(FieldSep);
 			else
-				strb.Append(rec.CoolingDegreeDays.ToString("F1") + listsep);
+				strb.Append(rec.CoolingDegreeDays.ToString("F1") + FieldSep);
 
-			strb.Append(rec.HighSolar + listsep);
-			strb.Append(rec.HighSolarTime.ToString("HH:mm") + listsep);
-			strb.Append(rec.HighUv.ToString(Program.cumulus.UVFormat) + listsep);
-			strb.Append(rec.HighUvTime.ToString("HH:mm") + listsep);
+			strb.Append(rec.HighSolar + FieldSep);
+			strb.Append(rec.HighSolarTime.ToString("HH:mm") + FieldSep);
+			strb.Append(rec.HighUv.ToString(Program.cumulus.UVFormat) + FieldSep);
+			strb.Append(rec.HighUvTime.ToString("HH:mm") + FieldSep);
 
 			if (rec.HighFeelsLike == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.HighFeelsLike.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.HighFeelsLikeTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighFeelsLike.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.HighFeelsLikeTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.LowFeelsLike == 9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.LowFeelsLike.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.LowFeelsLikeTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.LowFeelsLike.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.LowFeelsLikeTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.HighHumidex == -9999)
-				strb.Append(listsep + listsep);
+				strb.Append(FieldSep + FieldSep);
 			else
 			{
-				strb.Append(rec.HighHumidex.ToString(Program.cumulus.TempFormat) + listsep);
-				strb.Append(rec.HighHumidexTime.ToString("HH:mm") + listsep);
+				strb.Append(rec.HighHumidex.ToString(Program.cumulus.TempFormat) + FieldSep);
+				strb.Append(rec.HighHumidexTime.ToString("HH:mm") + FieldSep);
 			}
 
 			if (rec.ChillHours != -9999)
@@ -408,7 +442,7 @@ namespace CreateMissing
 
 		private Dayfilerec ParseDayFileRec(string data)
 		{
-			var st = new List<string>(Regex.Split(data, CultureInfo.CurrentCulture.TextInfo.ListSeparator));
+			var st = new List<string>(Regex.Split(data, FieldSep));
 			double varDbl;
 			int varInt;
 			int idx = 0;
@@ -416,20 +450,20 @@ namespace CreateMissing
 			var rec = new Dayfilerec();
 			try
 			{
-				rec.Date = DdmmyyStrToDate(st[idx++]);
+				rec.Date = Utils.DdmmyyStrToDate(st[idx++]);
 				rec.HighGust = Convert.ToDouble(st[idx++]);
 				rec.HighGustBearing = Convert.ToInt32(st[idx++]);
-				rec.HighGustTime = GetDateTime(rec.Date, st[idx++]);
+				rec.HighGustTime = Utils.GetDateTime(rec.Date, st[idx++]);
 				rec.LowTemp = Convert.ToDouble(st[idx++]);
-				rec.LowTempTime = GetDateTime(rec.Date, st[idx++]);
+				rec.LowTempTime = Utils.GetDateTime(rec.Date, st[idx++]);
 				rec.HighTemp = Convert.ToDouble(st[idx++]);
-				rec.HighTempTime = GetDateTime(rec.Date, st[idx++]);
+				rec.HighTempTime = Utils.GetDateTime(rec.Date, st[idx++]);
 				rec.LowPress = Convert.ToDouble(st[idx++]);
-				rec.LowPressTime = GetDateTime(rec.Date, st[idx++]);
+				rec.LowPressTime = Utils.GetDateTime(rec.Date, st[idx++]);
 				rec.HighPress = Convert.ToDouble(st[idx++]);
-				rec.HighPressTime = GetDateTime(rec.Date, st[idx++]);
+				rec.HighPressTime = Utils.GetDateTime(rec.Date, st[idx++]);
 				rec.HighRainRate = Convert.ToDouble(st[idx++]);
-				rec.HighRainRateTime = GetDateTime(rec.Date, st[idx++]);
+				rec.HighRainRateTime = Utils.GetDateTime(rec.Date, st[idx++]);
 				rec.TotalRain = Convert.ToDouble(st[idx++]);
 				rec.AvgTemp = Convert.ToDouble(st[idx++]);
 
@@ -440,19 +474,19 @@ namespace CreateMissing
 					rec.HighAvgWind = varDbl;
 
 				if (st.Count > idx++ && st[18].Length == 5)
-					rec.HighAvgWindTime = GetDateTime(rec.Date, st[18]);
+					rec.HighAvgWindTime = Utils.GetDateTime(rec.Date, st[18]);
 
 				if (st.Count > idx++ && int.TryParse(st[19], out varInt))
 					rec.LowHumidity = varInt;
 
 				if (st.Count > idx++ && st[20].Length == 5)
-					rec.LowHumidityTime = GetDateTime(rec.Date, st[20]);
+					rec.LowHumidityTime = Utils.GetDateTime(rec.Date, st[20]);
 
 				if (st.Count > idx++ && int.TryParse(st[21], out varInt))
 					rec.HighHumidity = varInt;
 
 				if (st.Count > idx++ && st[22].Length == 5)
-					rec.HighHumidityTime = GetDateTime(rec.Date, st[22]);
+					rec.HighHumidityTime = Utils.GetDateTime(rec.Date, st[22]);
 
 				if (st.Count > idx++ && double.TryParse(st[23], out varDbl))
 					rec.ET = varDbl;
@@ -464,43 +498,43 @@ namespace CreateMissing
 					rec.HighHeatIndex = varDbl;
 
 				if (st.Count > idx++ && st[26].Length == 5)
-					rec.HighHeatIndexTime = GetDateTime(rec.Date, st[26]);
+					rec.HighHeatIndexTime = Utils.GetDateTime(rec.Date, st[26]);
 
 				if (st.Count > idx++ && double.TryParse(st[27], out varDbl))
 					rec.HighAppTemp = varDbl;
 
 				if (st.Count > idx++ && st[28].Length == 5)
-					rec.HighAppTempTime = GetDateTime(rec.Date, st[28]);
+					rec.HighAppTempTime = Utils.GetDateTime(rec.Date, st[28]);
 
 				if (st.Count > idx++ && double.TryParse(st[29], out varDbl))
 					rec.LowAppTemp = varDbl;
 
 				if (st.Count > idx++ && st[30].Length == 5)
-					rec.LowAppTempTime = GetDateTime(rec.Date, st[30]);
+					rec.LowAppTempTime = Utils.GetDateTime(rec.Date, st[30]);
 
 				if (st.Count > idx++ && double.TryParse(st[31], out varDbl))
 					rec.HighHourlyRain = varDbl;
 
 				if (st.Count > idx++ && st[32].Length == 5)
-					rec.HighHourlyRainTime = GetDateTime(rec.Date, st[32]);
+					rec.HighHourlyRainTime = Utils.GetDateTime(rec.Date, st[32]);
 
 				if (st.Count > idx++ && double.TryParse(st[33], out varDbl))
 					rec.LowWindChill = varDbl;
 
 				if (st.Count > idx++ && st[34].Length == 5)
-					rec.LowWindChillTime = GetDateTime(rec.Date, st[34]);
+					rec.LowWindChillTime = Utils.GetDateTime(rec.Date, st[34]);
 
 				if (st.Count > idx++ && double.TryParse(st[35], out varDbl))
 					rec.HighDewPoint = varDbl;
 
 				if (st.Count > idx++ && st[36].Length == 5)
-					rec.HighDewPointTime = GetDateTime(rec.Date, st[36]);
+					rec.HighDewPointTime = Utils.GetDateTime(rec.Date, st[36]);
 
 				if (st.Count > idx++ && double.TryParse(st[37], out varDbl))
 					rec.LowDewPoint = varDbl;
 
 				if (st.Count > idx++ && st[38].Length == 5)
-					rec.LowDewPointTime = GetDateTime(rec.Date, st[38]);
+					rec.LowDewPointTime = Utils.GetDateTime(rec.Date, st[38]);
 
 				if (st.Count > idx++ && int.TryParse(st[39], out varInt))
 					rec.DominantWindBearing = varInt;
@@ -515,31 +549,31 @@ namespace CreateMissing
 					rec.HighSolar = varInt;
 
 				if (st.Count > idx++ && st[43].Length == 5)
-					rec.HighSolarTime = GetDateTime(rec.Date, st[43]);
+					rec.HighSolarTime = Utils.GetDateTime(rec.Date, st[43]);
 
 				if (st.Count > idx++ && double.TryParse(st[44], out varDbl))
 					rec.HighUv = varDbl;
 
 				if (st.Count > idx++ && st[45].Length == 5)
-					rec.HighUvTime = GetDateTime(rec.Date, st[45]);
+					rec.HighUvTime = Utils.GetDateTime(rec.Date, st[45]);
 
 				if (st.Count > idx++ && double.TryParse(st[46], out varDbl))
 					rec.HighFeelsLike = varDbl;
 
 				if (st.Count > idx++ && st[47].Length == 5)
-					rec.HighFeelsLikeTime = GetDateTime(rec.Date, st[47]);
+					rec.HighFeelsLikeTime = Utils.GetDateTime(rec.Date, st[47]);
 
 				if (st.Count > idx++ && double.TryParse(st[48], out varDbl))
 					rec.LowFeelsLike = varDbl;
 
 				if (st.Count > idx++ && st[49].Length == 5)
-					rec.LowFeelsLikeTime = GetDateTime(rec.Date, st[49]);
+					rec.LowFeelsLikeTime = Utils.GetDateTime(rec.Date, st[49]);
 
 				if (st.Count > idx++ && double.TryParse(st[50], out varDbl))
 					rec.HighHumidex = varDbl;
 
 				if (st.Count > idx++ && st[51].Length == 5)
-					rec.HighHumidexTime = GetDateTime(rec.Date, st[51]);
+					rec.HighHumidexTime = Utils.GetDateTime(rec.Date, st[51]);
 
 				if (st.Count > idx++ && double.TryParse(st[52], out varDbl))
 					rec.ChillHours = varDbl;
@@ -552,56 +586,6 @@ namespace CreateMissing
 			}
 			return rec;
 		}
-
-		private DateTime DdmmyyStrToDate(string d)
-		{
-			// Converts a date string in UK order to a DateTime
-			// Horrible hack, but we have localised separators, but UK sequence, so localised parsing may fail
-			string[] date = d.Split(new string[] { CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator }, StringSplitOptions.None);
-
-			int D = Convert.ToInt32(date[0]);
-			int M = Convert.ToInt32(date[1]);
-			int Y = Convert.ToInt32(date[2]);
-			if (Y > 70)
-			{
-				Y += 1900;
-			}
-			else
-			{
-				Y += 2000;
-			}
-
-			return new DateTime(Y, M, D);
-		}
-
-		public DateTime DdmmyyhhmmStrToDate(string d, string t)
-		{
-			// Converts a date string in UK order to a DateTime
-			// Horrible hack, but we have localised separators, but UK sequence, so localised parsing may fail
-			string[] date = d.Split(new string[] { CultureInfo.CurrentCulture.DateTimeFormat.DateSeparator }, StringSplitOptions.None);
-			string[] time = t.Split(new string[] { CultureInfo.CurrentCulture.DateTimeFormat.TimeSeparator }, StringSplitOptions.None);
-
-			int D = Convert.ToInt32(date[0]);
-			int M = Convert.ToInt32(date[1]);
-			int Y = Convert.ToInt32(date[2]);
-
-			// Double check - just in case we get a four digit year!
-			if (Y < 1900)
-			{
-				Y += Y > 70 ? 1900 : 2000;
-			}
-			int h = Convert.ToInt32(time[0]);
-			int m = Convert.ToInt32(time[1]);
-
-			return new DateTime(Y, M, D, h, m, 0);
-		}
-
-		private static DateTime GetDateTime(DateTime date, string time)
-		{
-			var tim = time.Split(CultureInfo.CurrentCulture.DateTimeFormat.TimeSeparator.ToCharArray()[0]);
-			return new DateTime(date.Year, date.Month, date.Day, int.Parse(tim[0]), int.Parse(tim[1]), 0);
-		}
-
 	}
 
 	public class Dayfilerec

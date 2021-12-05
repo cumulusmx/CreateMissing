@@ -1,3 +1,14 @@
+1.2.0
+—————
+- Change: Now based on .Net Framework 4.8
+- Now parses the source files for field and date separators rather than relying on system settings
+- Now flags if duplicate days are found in the dayfile.txt
+- Now flags if the out of order entries are found in dayfile.txt
+
+1.1.1
+—————
+- Fix: Processing not working correctly for 9am meteo day
+
 1.1.0
 —————
 - New: Adds Chill Hours for Cumulus MX v3.12.0
