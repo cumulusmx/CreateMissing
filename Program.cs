@@ -15,6 +15,10 @@ namespace CreateMissing
 		private static string CurrentLogName;
 		private static int CurrentLogLineNum = 0;
 
+		private static List<string> CurrentSolarLogLines = new List<string>();
+		private static string CurrentSolarLogName;
+		private static int CurrentSolarLogLineNum = 0;
+
 		private static int RecsAdded = 0;
 		private static int RecsUpdated = 0;
 		private static int RecsNoData = 0;
@@ -24,6 +28,10 @@ namespace CreateMissing
 
 		static void Main()
 		{
+
+#if DEBUG
+			//CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("sl_SI");
+#endif
 
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener($"MXdiags{Path.DirectorySeparatorChar}CreateMissing-{DateTime.Now:yyyyMMdd-HHmmss}.txt", "CMlog");
 			Trace.Listeners.Add(myTextListener);
@@ -82,6 +90,7 @@ namespace CreateMissing
 			// convert to meteo date if required.
 			currDate = SetStartTime(currDate);
 
+			var stopVal = new DateTime(2021, 11, 10);
 
 			for (var i = 0; i < dayfile.DayfileRecs.Count; i++)
 			{
@@ -121,6 +130,7 @@ namespace CreateMissing
 						}
 						else
 						{
+							newRec = GetSolarDayRecFromMonthly(currDate, newRec);
 							dayfile.DayfileRecs.Insert(i, newRec);
 							Console.WriteLine(" done.");
 							RecsAdded++;
@@ -190,7 +200,7 @@ namespace CreateMissing
 				TotalChillHours = dayfile.DayfileRecs[dayfile.DayfileRecs.Count - 1].ChillHours;
 			}
 
-			// that is the dayfile processed, but what it it had missing records at the end?
+			// that is the dayfile processed, but what if it had missing records at the end?
 			while (currDate <= endDate)
 			{
 				LogMessage($"Date: {currDate:d} : Creating missing day entry ... ");
@@ -205,6 +215,7 @@ namespace CreateMissing
 				}
 				else
 				{
+					newRec = GetSolarDayRecFromMonthly(currDate, newRec);
 					dayfile.DayfileRecs.Add(newRec);
 					Console.WriteLine(" done.");
 					RecsAdded++;
@@ -230,12 +241,12 @@ namespace CreateMissing
 			LogMessage($"Number of records added  : {RecsAdded}");
 			LogMessage($"Number of records updated: {RecsUpdated}");
 			LogMessage($"Number of records No Data: {RecsNoData}");
-			LogMessage($"Number of records that were OK: {RecsOK}");
+			LogMessage($"Number of records were OK: {RecsOK}");
 
 			Console.WriteLine($"\nNumber of records processed: {RecsAdded + RecsUpdated + RecsNoData + RecsOK}");
 			Console.WriteLine($"  Added  : {RecsAdded}");
 			Console.WriteLine($"  Updated: {RecsUpdated}");
-			Console.Write($"  No Data: {RecsNoData}");
+			Console.Write(    $"  No Data: {RecsNoData}");
 			if (RecsNoData > 0)
 			{
 				Console.WriteLine(" - please check the log file for the errors");
@@ -278,7 +289,6 @@ namespace CreateMissing
 			var recCount = 0;
 			var idx = 0;
 
-			var solarCurrRec = 0;
 
 			var entrydate = DateTime.MinValue;
 			var lastentrydate = DateTime.MinValue;
@@ -286,16 +296,6 @@ namespace CreateMissing
 
 			var startTime = date;
 			var endTime = IncrementMeteoDate(date);
-			var solarStartTime = startTime;
-			var solarEndTime = endTime;
-
-			// total sunshine is a pain for meteo days starting at 09:00 becuase we need to total to midnight only
-			// starting at 00:01 on the meteo day
-			if (startTime.Hour != 0)
-			{
-				solarStartTime = startTime.Date;
-				solarEndTime = solarStartTime.AddDays(1);
-			}
 
 			// get the monthly log file name
 			var fileName = GetLogFileName(date);
@@ -310,7 +310,7 @@ namespace CreateMissing
 			rec.Date = date;
 
 			// n-minute logfile. Fields are comma-separated:
-			// 0  Date in the form dd/mm/yy (the slash may be replaced by a dash in some cases)
+			// 0  Date in the form dd/mm/yy (the slash may be replaced by other characters)
 			// 1  Current time - hh:mm
 			// 2  Current temperature
 			// 3  Current humidity
@@ -349,6 +349,9 @@ namespace CreateMissing
 					if (dayfile.LineEnding == string.Empty)
 					{
 						Utils.TryDetectNewLine(fileName, out dayfile.LineEnding);
+
+						// determine the dayfile field and date separators
+						Utils.GetLogFileSeparators(fileName, CultureInfo.CurrentCulture.TextInfo.ListSeparator, out dayfile.FieldSep, out dayfile.DateSep);
 					}
 
 
@@ -373,19 +376,12 @@ namespace CreateMissing
 							// process each record in the file
 							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator));
 							// Regex is very expensive, let's assume the separator is always a single character
-							var st = new List<string>(CurrentLogLines[CurrentLogLineNum].Split((CultureInfo.CurrentCulture.TextInfo.ListSeparator)[0]));
-							entrydate = dayfile.DdmmyyhhmmStrToDate(st[0], st[1]);
+							var st = new List<string>(CurrentLogLines[CurrentLogLineNum].Split(dayfile.FieldSep[0]));
+							entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
 
 							// same meto day, or first record of the next day
 							// we want data from 00:00/09:00 to 00:00/09:00
 							// but next day 00:00/09:00 values are only used for summation functions
-							// Solar for 9am days is 00:00 the previous day to midnight the current day!
-							if (entrydate > solarStartTime && entrydate <= solarEndTime)
-							{
-								// we are just getting the solar values to midnight
-								ExtractSolarData(st, ref rec, entrydate);
-								solarCurrRec = CurrentLogLineNum;
-							}
 
 							if (entrydate >= startTime && entrydate <= endTime)
 							{
@@ -751,11 +747,7 @@ namespace CreateMissing
 
 								lastentrydate = entrydate;
 
-								if (solarStartTime != startTime)
-								{
-									CurrentLogLineNum = solarCurrRec;
-								}
-								else if (CurrentLogLineNum > 0)
+								if (CurrentLogLineNum > 0)
 								{
 									CurrentLogLineNum--;
 								}
@@ -765,11 +757,7 @@ namespace CreateMissing
 							else if (started && recCount <= 5)
 							{
 								// Oh dear, we have done the day and have less than five records
-								if (solarStartTime != startTime)
-								{
-									CurrentLogLineNum = solarCurrRec;
-								}
-								else if (CurrentLogLineNum > 0)
+								if (CurrentLogLineNum > 0)
 								{
 									CurrentLogLineNum--;
 								}
@@ -834,6 +822,150 @@ namespace CreateMissing
 				return null;
 		}
 
+		private static Dayfilerec GetSolarDayRecFromMonthly(DateTime date, Dayfilerec rec)
+		{
+			var started = false;
+			var finished = false;
+			var fileDate = date;
+			var startTime = date;
+			var endTime = IncrementMeteoDate(date);
+			var solarStartTime = startTime;
+			var solarEndTime = endTime;
+
+			// total sunshine is a pain for meteo days starting at 09:00 because we need to total to midnight only
+			// starting at 00:01 on the meteo day
+			if (startTime.Hour != 0)
+			{
+				solarStartTime = startTime.Date;
+				solarEndTime = solarStartTime.AddDays(1);
+			}
+
+			// get the monthly log file name
+			var fileName = GetLogFileName(solarStartTime);
+
+			// n-minute logfile. Fields are comma-separated:
+			// 0  Date in the form dd/mm/yy (the slash may be replaced by a dash in some cases)
+			// 1  Current time - hh:mm
+			// 2  Current temperature
+			// 3  Current humidity
+			// 4  Current dewpoint
+			// 5  Current wind speed
+			// 6  Recent (10-minute) high gust
+			// 7  Average wind bearing
+			// 8  Current rainfall rate
+			// 9  Total rainfall today so far
+			// 10  Current sea level pressure
+			// 11  Total rainfall counter as held by the station
+			// 12  Inside temperature
+			// 13  Inside humidity
+			// 14  Current gust (i.e. 'Latest')
+			// 15  Wind chill
+			// 16  Heat Index
+			// 17  UV Index
+			// 18  Solar Radiation
+			// 19  Evapotranspiration
+			// 20  Annual Evapotranspiration
+			// 21  Apparent temperature
+			// 22  Current theoretical max solar radiation
+			// 23  Hours of sunshine so far today
+			// 24  Current wind bearing
+			// 25  RG-11 rain total
+			// 26  Rain since midnight
+			// 27  Feels like
+			// 28  Humidex
+
+
+			while (!finished)
+			{
+				if (File.Exists(fileName))
+				{
+					// Have we determined the line endings for dayfile.txt yet?
+					if (dayfile.LineEnding == string.Empty)
+					{
+						Utils.TryDetectNewLine(fileName, out dayfile.LineEnding);
+
+						// determine the dayfile field and date separators
+						Utils.GetLogFileSeparators(fileName, CultureInfo.CurrentCulture.TextInfo.ListSeparator, out dayfile.FieldSep, out dayfile.DateSep);
+					}
+
+
+					try
+					{
+						if (CurrentSolarLogName != fileName)
+						{
+							LogMessage($"Solar: Loading log file - {fileName}");
+
+							CurrentSolarLogLines.Clear();
+							CurrentSolarLogLines.AddRange(File.ReadAllLines(fileName));
+							CurrentSolarLogName = fileName;
+							CurrentSolarLogLineNum = 0;
+						}
+
+						while (CurrentSolarLogLineNum < CurrentSolarLogLines.Count)
+						{
+							// process each record in the file
+							// Regex is very expensive, let's assume the separator is always a single character
+							var st = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(dayfile.FieldSep[0]));
+							var entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
+
+							// Solar for 9am days is 00:00 the previous day to midnight the current day!
+							if (entrydate > solarStartTime && entrydate <= solarEndTime)
+							{
+								// we are just getting the solar values to midnight
+								ExtractSolarData(st, ref rec, entrydate);
+							}
+							else if (started)
+							{
+								if (CurrentSolarLogLineNum > 0)
+								{
+									CurrentSolarLogLineNum--;
+								}
+
+								return rec;
+							}
+							else
+							{
+								// We didn't find any data
+								CurrentSolarLogLineNum = 0;
+								return rec;
+							}
+
+							CurrentSolarLogLineNum++;
+						} // end while
+					}
+					catch (Exception e)
+					{
+						LogMessage($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}");
+						LogMessage("Please edit the file to correct the error");
+						Console.WriteLine($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}");
+						Console.WriteLine("Please edit the file to correct the error");
+
+						Environment.Exit(1);
+					}
+				}
+				else
+				{
+					LogMessage($"Solar: Log file  not found - {fileName}");
+
+					return rec;
+				}
+				if (fileDate > date)
+				{
+					finished = true;
+					LogMessage("Solar: Finished processing the log files");
+				}
+				else
+				{
+					LogMessage($"Solar: Finished processing log file - {fileName}");
+					fileDate = fileDate.AddMonths(1);
+					fileName = GetLogFileName(fileDate);
+				}
+			}
+
+			return rec;
+		}
+
+
 		private static void AddMissingData(int idx, DateTime metDate)
 		{
 			LogMessage($"Date: { metDate:d} : Adding missing data");
@@ -848,6 +980,8 @@ namespace CreateMissing
 				Console.WriteLine($"\n{metDate:d} : No monthly data was found, not updating this record");
 				return;
 			}
+
+			newRec = GetSolarDayRecFromMonthly(metDate, newRec);
 
 			// update the existing record - only update missing values rather than replace
 			// everything in-case it has been previously edited to remove a spike etc.
