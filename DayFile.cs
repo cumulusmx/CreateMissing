@@ -18,7 +18,7 @@ namespace CreateMissing
 		public string FieldSep = string.Empty;
 		public string DateSep = string.Empty;
 
-		private string dayFileName = "data" + Path.DirectorySeparatorChar + "dayfile.txt";
+		private readonly string dayFileName = "data" + Path.DirectorySeparatorChar + "dayfile.txt";
 
 		public DayFile()
 		{
@@ -129,8 +129,10 @@ namespace CreateMissing
 				Console.WriteLine("No Dayfile found - No entries added to recent daily data list");
 				// add a rcord for yesterday, just so we have something to process,
 				// if it is left at default we will not write it out
-				var newRec = new Dayfilerec();
-				newRec.Date = DateTime.Today.AddDays(-1);
+				var newRec = new Dayfilerec
+				{
+					Date = DateTime.Today.AddDays(-1)
+				};
 				DayfileRecs.Add(newRec);
 			}
 		}

@@ -11,11 +11,11 @@ namespace CreateMissing
 	{
 		public static Cumulus cumulus;
 		private static DayFile dayfile;
-		private static List<string> CurrentLogLines = new List<string>();
+		private static readonly List<string> CurrentLogLines = new List<string>();
 		private static string CurrentLogName;
 		private static int CurrentLogLineNum = 0;
 
-		private static List<string> CurrentSolarLogLines = new List<string>();
+		private static readonly List<string> CurrentSolarLogLines = new List<string>();
 		private static string CurrentSolarLogName;
 		private static int CurrentSolarLogLineNum = 0;
 
