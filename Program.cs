@@ -289,8 +289,6 @@ namespace CreateMissing
 			var recCount = 0;
 			var idx = 0;
 
-
-			var entrydate = DateTime.MinValue;
 			var lastentrydate = DateTime.MinValue;
 			var lasttempvalue = 0.0;
 
@@ -377,7 +375,7 @@ namespace CreateMissing
 							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator));
 							// Regex is very expensive, let's assume the separator is always a single character
 							var st = new List<string>(CurrentLogLines[CurrentLogLineNum].Split(dayfile.FieldSep[0]));
-							entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
+							var entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
 
 							// same meto day, or first record of the next day
 							// we want data from 00:00/09:00 to 00:00/09:00
@@ -913,6 +911,7 @@ namespace CreateMissing
 							{
 								// we are just getting the solar values to midnight
 								ExtractSolarData(st, ref rec, entrydate);
+								started = true;
 							}
 							else if (started)
 							{
@@ -921,12 +920,6 @@ namespace CreateMissing
 									CurrentSolarLogLineNum--;
 								}
 
-								return rec;
-							}
-							else
-							{
-								// We didn't find any data
-								CurrentSolarLogLineNum = 0;
 								return rec;
 							}
 

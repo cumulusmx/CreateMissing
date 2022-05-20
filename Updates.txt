@@ -1,9 +1,13 @@
+1.2.1
+—————
+- Fix: Solar values not being populated in v1.2.0
+
 1.2.0
 —————
 - Change: Now based on .Net Framework 4.8
 - Now parses the source files for field and date separators rather than relying on system settings
 - Now flags if duplicate days are found in the dayfile.txt
-- Now flags if the out of order entries are found in dayfile.txt
+- Now flags if out of order entries are found in dayfile.txt
 
 1.1.1
 —————
