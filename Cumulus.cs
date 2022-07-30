@@ -57,7 +57,7 @@ namespace CreateMissing
 
 		private void ReadIniFile()
 		{
-			if (!System.IO.File.Exists("Cumulus.ini"))
+			if (!System.IO.File.Exists(Program.location + "Cumulus.ini"))
 			{
 				Program.LogMessage("Failed to find Cumulus.ini file!");
 				Console.WriteLine("Failed to find Cumulus.ini file!");

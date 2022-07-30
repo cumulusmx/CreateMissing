@@ -11,6 +11,8 @@ namespace CreateMissing
 	class Program
 	{
 		public static Cumulus cumulus;
+		public static string location;
+
 		private static DayFile dayfile;
 		private static readonly List<string> CurrentLogLines = new List<string>();
 		private static string CurrentLogName;
@@ -29,11 +31,6 @@ namespace CreateMissing
 
 		static void Main()
 		{
-
-#if DEBUG
-			//CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("sl_SI");
-#endif
-
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener($"MXdiags{Path.DirectorySeparatorChar}CreateMissing-{DateTime.Now:yyyyMMdd-HHmmss}.txt", "CMlog");
 			Trace.Listeners.Add(myTextListener);
 			Trace.AutoFlush = true;
@@ -45,6 +42,9 @@ namespace CreateMissing
 
 			LogMessage("Processing started");
 			Console.WriteLine($"\nProcessing started: {DateTime.Now:U}\n");
+
+			// get the location of the exe - we will assume this is in the Cumulus root folder
+			location = AppDomain.CurrentDomain.BaseDirectory;
 
 			cumulus = new Cumulus();
 
@@ -90,8 +90,6 @@ namespace CreateMissing
 
 			// convert to meteo date if required.
 			currDate = SetStartTime(currDate);
-
-			var stopVal = new DateTime(2021, 11, 10);
 
 			for (var i = 0; i < dayfile.DayfileRecs.Count; i++)
 			{
@@ -287,7 +285,6 @@ namespace CreateMissing
 
 			var started = false;
 			var finished = false;
-			var fileDate = date;
 			var recCount = 0;
 			var idx = 0;
 
@@ -300,6 +297,7 @@ namespace CreateMissing
 
 			// get the monthly log file name
 			var fileName = GetLogFileName(startTimeMinus1);
+			var fileDate = startTimeMinus1;
 
 			var rain1hLog = new Queue<LastHourRainLog>();
 			var rain24hLog = new Queue<LastHourRainLog>();
@@ -314,8 +312,8 @@ namespace CreateMissing
 			var totalRainfall = 0.0;
 			var lastentryrain = 0.0;
 			var lastentrycounter = 0.0;
-			var rainThisHour = 0.0;
-			var rainLast24Hr = 0.0;
+			double rainThisHour;
+			double rainLast24Hr;
 
 			rec.Date = date;
 
@@ -369,7 +367,7 @@ namespace CreateMissing
 					{
 						if (CurrentLogName != fileName)
 						{
-							LogMessage($"Loading log file - {fileName}");
+							LogMessage($"LogFile: Loading log file - {fileName}");
 
 							CurrentLogLines.Clear();
 							CurrentLogLines.AddRange(File.ReadAllLines(fileName));
@@ -394,19 +392,57 @@ namespace CreateMissing
 
 							// are we within 24 hours of the start time?
 							// if so initialise the 24 hour rain process
-							if (entrydate >= startTimeMinus1 && entrydate < startTime)
+							if (entrydate >= startTimeMinus1 && entrydate <= startTime)
 							{
-								lastentryrain = double.Parse(st[9]);
-								lastentrycounter = double.Parse(st[11]);
 
-								Add24HourRainEntry(entrydate, totalRainfall + lastentryrain, ref rain24hLog);
-								lastentrydate = entrydate;
-								continue;
+								// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
+								// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
+								// after that build the total was reset to zero in the entry
+								// messy!
+								// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
+								var rain = double.Parse(st[9]);    // 9
+								var raincounter = double.Parse(st[11]);  // 11
+
+								// we need to initalise the rain counter on the first record
+								if (rain1hLog.Count == 0)
+								{
+									lastentrycounter = raincounter;
+								}
+
+
+								if (entrydate == startTime)
+								{
+
+									if (rain == 0 && (raincounter - lastentrycounter > 0) && (raincounter - lastentrycounter < counterJumpTooBig))
+									{
+										rain = lastentryrain + (raincounter - lastentrycounter) * cumulus.CalibRainMult;
+									}
+									else if (rain == 0)
+									{
+										rain = lastentryrain;
+									}
+								}
+								else if (entrydate == startTimeMinus1)
+								{
+									rain = 0;
+								}
+
+								AddLastHoursRainEntry(entrydate, rain, ref rain1hLog, ref rain24hLog);
+
+								lastentryrain = rain;
+
+								if (entrydate < startTime)
+								{
+									lastentrycounter = raincounter;
+									lastentrydate = entrydate;
+
+									continue;
+								}
 							}
 
 							// same meto day, or first record of the next day
 							// we want data from 00:00/09:00 to 00:00/09:00
-							// but next day 00:00/09:00 values are only used for summation functions
+							// but next day 00:00/09:00 values are only used for summation functions and rainfall in x hours
 
 							if (entrydate >= startTime && entrydate <= endTime)
 							{
@@ -646,18 +682,21 @@ namespace CreateMissing
 									// total rain - just take the last value - the user may have edited the value during the day
 									rec.TotalRain = raintoday;
 
-									// add last hours rain
-									AddLastHoursRainEntry(entrydate, totalRainfall + raintoday, ref rain1hLog, ref rain24hLog);
+									// add last hours rain - the first record of the day has already been added as the last record of the previous day
+									if (entrydate > startTime)
+									{
+										AddLastHoursRainEntry(entrydate, totalRainfall + raintoday, ref rain1hLog, ref rain24hLog);
+									}
 
 									// rainfall in last hour
-									rainThisHour = rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter;
+									rainThisHour = Math.Round(rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter, cumulus.Units.RainDPlaces);
 									if (rainThisHour > rec.HighHourlyRain)
 									{
 										rec.HighHourlyRain = rainThisHour;
 										rec.HighHourlyRainTime = entrydate;
 									}
 
-									rainLast24Hr = rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter;
+									rainLast24Hr = Math.Round(rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter, cumulus.Units.RainDPlaces);
 									if (rainLast24Hr > rec.HighRain24h)
 									{
 										rec.HighRain24h = rainLast24Hr;
@@ -703,6 +742,8 @@ namespace CreateMissing
 									lastentryrain = raintoday;
 									lastentrycounter = raincounter;
 									lasttempvalue = outsidetemp;
+									lastentrydate = entrydate;
+									continue;
 								}
 								else // we are outside the time range of the current day
 								{
@@ -762,10 +803,7 @@ namespace CreateMissing
 									{
 										raintoday += (raincounter - lastentrycounter) * cumulus.CalibRainMult;
 									}
-									else
-									{
-										raintoday = lastentryrain;
-									}
+
 									// add last hours rain for this last record. 
 									AddLastHoursRainEntry(entrydate, totalRainfall + raintoday, ref rain1hLog, ref rain24hLog);
 
@@ -793,7 +831,9 @@ namespace CreateMissing
 									finished = true;
 								}
 							}
-							else if (started && recCount >= 5) // need at least five records to create a day
+							
+							
+							if (started && recCount >= 5) // need at least five records to create a day
 							{
 								// we were in the right day, now we aren't
 								// calc average temp for the day, edge case we only have one record, in which case the totals will be zero, use hi or lo temp, they will be the same!
@@ -801,8 +841,6 @@ namespace CreateMissing
 
 								// calc dominant wind direction for the day
 								rec.DominantWindBearing = Utils.CalcAvgBearing(totalwinddirX, totalwinddirY);
-
-								lastentrydate = entrydate;
 
 								return rec;
 							}
@@ -822,9 +860,9 @@ namespace CreateMissing
 					}
 					catch (Exception e)
 					{
-						LogMessage($"Error at line {CurrentLogLineNum + 1}, field {idx + 1} of {fileName} : {e.Message}");
-						LogMessage("Please edit the file to correct the error");
-						Console.WriteLine($"Error at line {CurrentLogLineNum + 1}, field {idx + 1} of {fileName} : {e.Message}");
+						LogMessage($"LogFile: Error at line {CurrentLogLineNum}, field {idx + 1} of {fileName} : {e.Message}");
+						LogMessage("LogFile: Please edit the file to correct the error");
+						Console.WriteLine($"Error at line {CurrentLogLineNum}, field {idx + 1} of {fileName} : {e.Message}");
 						Console.WriteLine("Please edit the file to correct the error");
 
 						Environment.Exit(1);
@@ -832,7 +870,7 @@ namespace CreateMissing
 				}
 				else
 				{
-					LogMessage($"Log file  not found - {fileName}");
+					LogMessage($"LogFile: Log file  not found - {fileName}");
 					// have we run out of log files without finishing the current day?
 					if (started && !finished)
 					{
@@ -851,11 +889,11 @@ namespace CreateMissing
 				if (fileDate > date)
 				{
 					finished = true;
-					LogMessage("Finished processing the log files");
+					LogMessage("LogFile: Finished processing all log files");
 				}
 				else
 				{
-					LogMessage($"Finished processing log file - {fileName}");
+					LogMessage($"LogFile: Finished processing log file - {fileName}");
 					fileDate = fileDate.AddMonths(1);
 					fileName = GetLogFileName(fileDate);
 				}
@@ -975,8 +1013,8 @@ namespace CreateMissing
 					}
 					catch (Exception e)
 					{
-						LogMessage($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}");
-						LogMessage("Please edit the file to correct the error");
+						LogMessage($"Solar: Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}");
+						LogMessage("Solar: Please edit the file to correct the error");
 						Console.WriteLine($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}");
 						Console.WriteLine("Please edit the file to correct the error");
 
@@ -992,7 +1030,7 @@ namespace CreateMissing
 				if (fileDate > date)
 				{
 					finished = true;
-					LogMessage("Solar: Finished processing the log files");
+					LogMessage("Solar: Finished processing all log files");
 				}
 				else
 				{
@@ -1178,7 +1216,7 @@ namespace CreateMissing
 		{
 			var datestring = thedate.ToString("MMMyy").Replace(".", "");
 
-			return "data" + Path.DirectorySeparatorChar + datestring + "log.txt";
+			return location + "data" + Path.DirectorySeparatorChar + datestring + "log.txt";
 		}
 
 		private static void ExtractSolarData(List<string> st, ref Dayfilerec rec, DateTime entrydate)
@@ -1284,12 +1322,6 @@ namespace CreateMissing
 				// the oldest entry is older than 24 hours ago, delete it
 				h24Queue.Dequeue();
 			}
-		}
-
-		private static void Add24HourRainEntry(DateTime ts, double rain, ref Queue<LastHourRainLog> h24Queue)
-		{
-			var lastrain = new LastHourRainLog(ts, rain);
-			h24Queue.Enqueue(lastrain);
 		}
 	}
 

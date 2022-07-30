@@ -17,7 +17,7 @@ namespace CreateMissing
 		public string FieldSep = string.Empty;
 		public string DateSep = string.Empty;
 
-		private readonly string dayFileName = "data" + Path.DirectorySeparatorChar + "dayfile.txt";
+		private readonly string dayFileName = Program.location + "data" + Path.DirectorySeparatorChar + "dayfile.txt";
 
 		public DayFile()
 		{
