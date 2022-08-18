@@ -1,0 +1,43 @@
+
+
+StartDate
+
+CurrentDate = StartDate
+
+// process each dayfile record we have at the start
+ForEach dayfile record
+{
+    if record > CurrentDate
+    {
+        while record > CurrentDate
+        {
+            Get new rec from logfile
+            if we get a record from log file
+                Update rec with Solar from log
+
+            increment CurrentDate
+        }
+
+        decrement CurrentDate
+    }
+    else
+    {
+        if record has missing data
+            Get missing data from log file
+    }
+
+    increment CurrentDate
+}
+
+// now add any missing records at the end
+While CurrentDate < EndDate
+{
+    Get record from logfile
+    if we get a record from log file
+        Update rec with Solar from log
+
+    increment CurrentDate
+}
+
+
+Save the dayfile
