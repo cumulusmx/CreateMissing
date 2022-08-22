@@ -12,6 +12,7 @@ namespace CreateMissing
 	{
 		public static Cumulus cumulus;
 		public static string location;
+		public static ConsoleColor defConsoleColour;
 
 		private static DayFile dayfile;
 		private static readonly List<string> CurrentLogLines = new List<string>();
@@ -35,13 +36,17 @@ namespace CreateMissing
 			Trace.Listeners.Add(myTextListener);
 			Trace.AutoFlush = true;
 
+			defConsoleColour = Console.ForegroundColor;
+
 			var fullVer = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
 			var version = $"{fullVer.Major}.{fullVer.Minor}.{fullVer.Build}";
 			LogMessage("CreateMissing v." + version);
 			Console.WriteLine("CreateMissing v." + version);
 
 			LogMessage("Processing started");
-			Console.WriteLine($"\nProcessing started: {DateTime.Now:U}\n");
+			Console.WriteLine();
+			Console.WriteLine($"Processing started: {DateTime.Now:U}");
+			Console.WriteLine();
 
 			// get the location of the exe - we will assume this is in the Cumulus root folder
 			location = AppDomain.CurrentDomain.BaseDirectory;
@@ -59,7 +64,8 @@ namespace CreateMissing
 			LogMessage($"First dayfile record: {dayfileStart:d}");
 			LogMessage($"Records Began Date  : {currDate:d}");
 			Console.WriteLine($"First dayfile record: {dayfileStart:d}");
-			Console.WriteLine($"Records Began Date  : {currDate:d}\n");
+			Console.WriteLine($"Records Began Date  : {currDate:d}");
+			Console.WriteLine();
 
 			// Sanity check #1. Is the first date in the day file order than the records began date?
 			if (dayfileStart < currDate)
@@ -80,8 +86,8 @@ namespace CreateMissing
 			if (currDate >= DateTime.Today)
 			{
 				LogMessage("Start date is today!???");
-				Console.WriteLine("Start date is today!???");
-				Console.WriteLine("Press any key to exit");
+				LogConsole("Start date is today!???", ConsoleColor.Cyan);
+				LogConsole("Press any key to exit", ConsoleColor.DarkYellow);
 				Console.ReadKey(true);
 				Console.WriteLine("Exiting...");
 
@@ -124,14 +130,14 @@ namespace CreateMissing
 						if (newRec == null)
 						{
 							LogMessage($"Date: {currDate:d} : No monthly data was found, not creating a record");
-							Console.WriteLine($"\nDate: {currDate:d} : No monthly data was found, not creating a record");
+							LogConsole("No monthly data was found, not creating a record", ConsoleColor.Yellow);
 							RecsNoData++;
 						}
 						else
 						{
 							newRec = GetSolarDayRecFromMonthly(currDate, newRec);
 							dayfile.DayfileRecs.Insert(i, newRec);
-							Console.WriteLine(" done.");
+							LogConsole("done.", ConsoleColor.Green);
 							RecsAdded++;
 							i++;
 						}
@@ -167,7 +173,8 @@ namespace CreateMissing
 					else
 					{
 						LogMessage($"Date: {currDate:d} : Entry is OK");
-						Console.WriteLine($"Date: {currDate:d} : Entry is OK");
+						Console.Write($"Date: {currDate:d} : ");
+						LogConsole("Entry is OK", ConsoleColor.Green);
 						RecsOK++;
 					}
 				}
@@ -209,14 +216,14 @@ namespace CreateMissing
 				if (newRec == null)
 				{
 					LogMessage($"Date: {currDate:d} : No monthly data was found, not creating a record");
-					Console.WriteLine($"\nDate: {currDate:d} : No monthly data was found, not creating a record");
+					LogConsole("No monthly data was found, not creating a record", ConsoleColor.Yellow);
 					RecsNoData++;
 				}
 				else
 				{
 					newRec = GetSolarDayRecFromMonthly(currDate, newRec);
 					dayfile.DayfileRecs.Add(newRec);
-					Console.WriteLine(" done.");
+					LogConsole("done.", ConsoleColor.Green);
 					RecsAdded++;
 				}
 				currDate = IncrementMeteoDate(currDate);
@@ -230,7 +237,8 @@ namespace CreateMissing
 
 			// create the new dayfile.txt with a different name
 			LogMessage("Saving new dayfile.txt");
-			Console.WriteLine("\nSaving new dayfile.txt");
+			Console.WriteLine();
+			Console.WriteLine("Saving new dayfile.txt");
 
 			dayfile.WriteDayFile();
 
@@ -242,29 +250,48 @@ namespace CreateMissing
 			LogMessage($"Number of records No Data: {RecsNoData}");
 			LogMessage($"Number of records were OK: {RecsOK}");
 
-			Console.WriteLine($"\nNumber of records processed: {RecsAdded + RecsUpdated + RecsNoData + RecsOK}");
+			Console.WriteLine();
+			Console.WriteLine($"Number of records processed: {RecsAdded + RecsUpdated + RecsNoData + RecsOK}");
+			Console.WriteLine($"  Were OK: {RecsOK}");
 			Console.WriteLine($"  Added  : {RecsAdded}");
 			Console.WriteLine($"  Updated: {RecsUpdated}");
-			Console.Write(    $"  No Data: {RecsNoData}");
+			LogConsole(       $"  No Data: {RecsNoData}", ConsoleColor.Red, false);
 			if (RecsNoData > 0)
 			{
-				Console.WriteLine(" - please check the log file for the errors");
+				LogConsole(" - please check the log file for the errors", ConsoleColor.Cyan);
 			}
 			else
 			{
 				Console.WriteLine();
 			}
-			Console.WriteLine($"  Were OK: {RecsOK}");
 
-			LogMessage("\nProcessing complete.");
-			Console.WriteLine("\n\nProcessing complete.");
-			Console.WriteLine("Press any key to exit");
+			LogMessage("Processing complete.");
+			Console.WriteLine();
+			Console.WriteLine();
+			Console.WriteLine("Processing complete.");
+			LogConsole("Press any key to exit", ConsoleColor.DarkYellow);
 			Console.ReadKey(true);
 		}
 
 		public static void LogMessage(string message)
 		{
 			Trace.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff ") + message);
+		}
+
+		public static void LogConsole(string msg, ConsoleColor colour, bool newLine = true)
+		{
+			Console.ForegroundColor = colour;
+
+			if (newLine)
+			{
+				Console.WriteLine(msg);
+			}
+			else
+			{
+				Console.Write(msg);
+			}
+
+			Console.ForegroundColor = defConsoleColour;
 		}
 
 		private static Dayfilerec GetDayRecFromMonthly(DateTime date)
@@ -862,8 +889,8 @@ namespace CreateMissing
 					{
 						LogMessage($"LogFile: Error at line {CurrentLogLineNum}, field {idx + 1} of {fileName} : {e.Message}");
 						LogMessage("LogFile: Please edit the file to correct the error");
-						Console.WriteLine($"Error at line {CurrentLogLineNum}, field {idx + 1} of {fileName} : {e.Message}");
-						Console.WriteLine("Please edit the file to correct the error");
+						LogConsole($"Error at line {CurrentLogLineNum}, field {idx + 1} of {fileName} : {e.Message}", ConsoleColor.Red);
+						LogConsole("Please edit the file to correct the error", ConsoleColor.Red);
 
 						Environment.Exit(1);
 					}
@@ -1015,8 +1042,8 @@ namespace CreateMissing
 					{
 						LogMessage($"Solar: Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}");
 						LogMessage("Solar: Please edit the file to correct the error");
-						Console.WriteLine($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}");
-						Console.WriteLine("Please edit the file to correct the error");
+						LogConsole($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}", ConsoleColor.Red);
+						LogConsole("Please edit the file to correct the error", ConsoleColor.Red);
 
 						Environment.Exit(1);
 					}
@@ -1055,7 +1082,7 @@ namespace CreateMissing
 			{
 				RecsNoData++;
 				LogMessage($"{metDate:d} : No monthly data was found, not updating this record");
-				Console.WriteLine($"\n{metDate:d} : No monthly data was found, not updating this record");
+				LogConsole("No monthly data was found, not updating this record", ConsoleColor.Yellow);
 				return;
 			}
 
@@ -1208,7 +1235,7 @@ namespace CreateMissing
 				dayfile.DayfileRecs[idx].HighRain24h = newRec.HighRain24h;
 				dayfile.DayfileRecs[idx].HighRain24hTime = newRec.HighRain24hTime;
 			}
-			Console.WriteLine("done.");
+			LogConsole("done.", ConsoleColor.Green);
 			RecsUpdated++;
 		}
 
@@ -1323,7 +1350,7 @@ namespace CreateMissing
 				h24Queue.Dequeue();
 			}
 		}
-	}
+		}
 
 
 	class LastHourRainLog
