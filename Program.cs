@@ -12,7 +12,8 @@ namespace CreateMissing
 	{
 		public static Cumulus cumulus;
 		public static string location;
-		public static ConsoleColor defConsoleColour;
+
+		private static ConsoleColor defConsoleColour;
 
 		private static DayFile dayfile;
 		private static readonly List<string> CurrentLogLines = new List<string>();
@@ -409,6 +410,14 @@ namespace CreateMissing
 							// we use idx 0 & 1 together (date/time), set the idx to 1
 							idx = 1;
 							// process each record in the file
+							// first a sanity check for an empty line!
+							if (string.IsNullOrWhiteSpace(CurrentLogLines[CurrentLogLineNum]))
+							{
+								CurrentLogLineNum++;
+								LogMessage($"LogFile: Error at line {CurrentLogLineNum}, an empty line was detected!");
+								continue;
+							}
+
 							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator));
 							// Regex is very expensive, let's assume the separator is always a single character
 							var st = new List<string>(CurrentLogLines[CurrentLogLineNum++].Split(dayfile.FieldSep[0]));
@@ -831,7 +840,7 @@ namespace CreateMissing
 										raintoday += (raincounter - lastentrycounter) * cumulus.CalibRainMult;
 									}
 
-									// add last hours rain for this last record. 
+									// add last hours rain for this last record.
 									AddLastHoursRainEntry(entrydate, totalRainfall + raintoday, ref rain1hLog, ref rain24hLog);
 
 									// rainfall in last hour
@@ -858,8 +867,8 @@ namespace CreateMissing
 									finished = true;
 								}
 							}
-							
-							
+
+
 							if (started && recCount >= 5) // need at least five records to create a day
 							{
 								// we were in the right day, now we aren't
@@ -1014,6 +1023,14 @@ namespace CreateMissing
 						while (CurrentSolarLogLineNum < CurrentSolarLogLines.Count)
 						{
 							// process each record in the file
+							// first a sanity check for an empty line!
+							if (string.IsNullOrWhiteSpace(CurrentLogLines[CurrentLogLineNum]))
+							{
+								CurrentLogLineNum++;
+								LogMessage($"Solar: Error at line {CurrentLogLineNum}, an empty line was detected!");
+								continue;
+							}
+
 							// Regex is very expensive, let's assume the separator is always a single character
 							var st = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(dayfile.FieldSep[0]));
 							var entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
