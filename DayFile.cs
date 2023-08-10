@@ -25,8 +25,8 @@ namespace CreateMissing
 
 			if (File.Exists(dayFileName + ".sav"))
 			{
-				Console.WriteLine("The dayfile.txt backup file dayfile.txt.sav already exists, aborting to prevent overwriting the original data.");
-				Console.WriteLine("Press any key to exit");
+				Program.LogConsole("The dayfile.txt backup file dayfile.txt.sav already exists, aborting to prevent overwriting the original data.", ConsoleColor.Cyan);
+				Program.LogConsole("Press any key to exit", ConsoleColor.DarkYellow);
 				Console.ReadKey(true);
 				Console.WriteLine("Exiting...");
 				Environment.Exit(1);
@@ -77,7 +77,8 @@ namespace CreateMissing
 								if (newRec.Date < lastDate)
 								{
 									Program.LogMessage($"LoadDayFile: Error - Date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
-									Console.WriteLine($"\nError, date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
+									Console.WriteLine();
+									Program.LogConsole($"Error, date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'", ConsoleColor.Red);
 									Environment.Exit(3);
 								}
 
@@ -88,7 +89,8 @@ namespace CreateMissing
 								if (newRec.Date == lastDate)
 								{
 									Program.LogMessage($"LoadDayFile: Error - Duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
-									Console.WriteLine($"\nError, duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
+									Console.WriteLine();
+									Program.LogConsole($"Error, duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'", ConsoleColor.Red);
 									Environment.Exit(4);
 								}
 
@@ -106,8 +108,9 @@ namespace CreateMissing
 								if (errorCount >= 20)
 								{
 									Program.LogMessage($"LoadDayFile: Too many errors reading {dayFileName} - aborting load of daily data");
-									Console.WriteLine($"Too many errors reading {dayFileName} - aborting load of daily data");
-									Console.WriteLine("Please see the log file for more details");
+									Console.WriteLine();
+									Program.LogConsole($"Too many errors reading {dayFileName} - aborting load of daily data", ConsoleColor.Red);
+									Program.LogConsole("Please see the log file for more details", ConsoleColor.Red);
 									Environment.Exit(5);
 								}
 							}
@@ -125,7 +128,7 @@ namespace CreateMissing
 			else
 			{
 				Program.LogMessage("LoadDayFile: No Dayfile found - No entries added to recent daily data list");
-				Console.WriteLine("No Dayfile found - No entries added to recent daily data list");
+				Program.LogConsole("No Dayfile found - No entries added to recent daily data list", ConsoleColor.Cyan);
 				// add a rcord for yesterday, just so we have something to process,
 				// if it is left at default we will not write it out
 				var newRec = new Dayfilerec
