@@ -2,14 +2,14 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
-    <AssemblyVersion>1.3.1.3</AssemblyVersion>
-    <FileVersion>1.3.1.3</FileVersion>
+    <AssemblyVersion>1.4.0.4</AssemblyVersion>
+    <FileVersion>1.4.0.4</FileVersion>
     <Version></Version>
     <StartupObject>CreateMissing.Program</StartupObject>
     <TargetFramework>net48</TargetFramework>
     <Authors>Mark Crossley</Authors>
     <Company>Cumulus MX</Company>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="if $(ConfigurationName)==Release (&#xD;&#xA;echo.&#xD;&#xA;echo Update Distribution folder&#xD;&#xA;echo copy MX exe&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;echo copy MX config&#xD;&#xA;xcopy &quot;$(TargetPath).config&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;)" />
+    <Exec Command="if $(ConfigurationName)==Release (&#xD;&#xA;echo.&#xD;&#xA;echo Update Distribution folder&#xD;&#xA;echo copy .exe&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;echo copy .config&#xD;&#xA;xcopy &quot;$(TargetPath).config&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;)" />
   </Target>
 
 </Project>
