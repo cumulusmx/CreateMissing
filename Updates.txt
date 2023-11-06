@@ -1,3 +1,8 @@
+1.4.0
+—————
+- Change to AnyCPU - will now run as 64 bit process on 64 bit OS
+- Now uses StartDateIso from Cumulus.ini
+
 1.3.1
 —————
 - Now skips (with a warning in the diags log) blank lines in the monthly log files

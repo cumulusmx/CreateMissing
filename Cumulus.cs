@@ -1,13 +1,13 @@
 ﻿using CumulusMX;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace CreateMissing
 {
 	class Cumulus
 	{
-		public string RecordsBeganDate;
 		public int RolloverHour;
 		public bool Use10amInSummer;
 
@@ -29,6 +29,8 @@ namespace CreateMissing
 		public double ChillHourThreshold;
 
 		public double CalibRainMult;
+
+		public DateTime RecordsBeganDateTime;
 
 		private readonly StationOptions StationOptions = new StationOptions();
 		internal StationUnits Units = new StationUnits();
@@ -72,7 +74,26 @@ namespace CreateMissing
 
 			var IncrementPressureDP = ini.GetValue("Station", "DavisIncrementPressureDP", false);
 
-			RecordsBeganDate = ini.GetValue("Station", "StartDate", DateTime.Now.ToLongDateString());
+			if (ini.ValueExists("Station", "StartDate"))
+			{
+				var RecordsBeganDate = ini.GetValue("Station", "StartDate", DateTime.Now.ToLongDateString());
+				try
+				{
+					RecordsBeganDateTime = DateTime.Parse(RecordsBeganDate);
+				}
+				catch (Exception ex)
+				{
+					Program.LogMessage($"Error parsing the RecordsBegan date {RecordsBeganDate}: {ex.Message}");
+				}
+			}
+			else
+			{
+				var RecordsBeganDate = ini.GetValue("Station", "StartDateIso", DateTime.Now.ToString("yyyy-MM-dd"));
+				RecordsBeganDateTime = DateTime.ParseExact(RecordsBeganDate, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+			}
+
+			Program.LogMessage($"Cumulus start date Parsed: {RecordsBeganDateTime:yyyy-MM-dd}");
+
 
 
 			if ((StationType == 0) || (StationType == 1))

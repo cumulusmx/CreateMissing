@@ -2,14 +2,14 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
-    <AssemblyVersion>1.3.1.3</AssemblyVersion>
-    <FileVersion>1.3.1.3</FileVersion>
+    <AssemblyVersion>1.4.0.4</AssemblyVersion>
+    <FileVersion>1.4.0.4</FileVersion>
     <Version></Version>
     <StartupObject>CreateMissing.Program</StartupObject>
     <TargetFramework>net48</TargetFramework>
     <Authors>Mark Crossley</Authors>
     <Company>Cumulus MX</Company>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

@@ -58,7 +58,7 @@ namespace CreateMissing
 			dayfile = new DayFile();
 
 			// for each day since records began date
-			var currDate = DateTime.Parse(cumulus.RecordsBeganDate);
+			var currDate = cumulus.RecordsBeganDateTime;
 			var dayfileStart = dayfile.DayfileRecs.Count > 0 ? dayfile.DayfileRecs[0].Date : DateTime.MaxValue;
 			var endDate = SetStartTime(DateTime.Now.AddDays(-1).Date);
 
