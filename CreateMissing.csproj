@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="if $(ConfigurationName)==Release (&#xD;&#xA;echo.&#xD;&#xA;echo Update Distribution folder&#xD;&#xA;echo copy MX exe&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;echo copy MX config&#xD;&#xA;xcopy &quot;$(TargetPath).config&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;)" />
+    <Exec Command="if $(ConfigurationName)==Release (&#xD;&#xA;echo.&#xD;&#xA;echo Update Distribution folder&#xD;&#xA;echo copy .exe&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;echo copy .config&#xD;&#xA;xcopy &quot;$(TargetPath).config&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;)" />
   </Target>
 
 </Project>
