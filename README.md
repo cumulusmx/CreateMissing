@@ -29,10 +29,10 @@ The entry in Cumulus.ini can be found in the [Station] section of the file...
 
 ```` ini
 [Station]
-StartDate=13 Jan 2010
+StartDateIso=YYYY-MM-DD
 ````
 
-The format of the date will depend on your locale, if you edit this entry **you must retain the same format**.
+**you must retain the same format**.
 
 However, if CreateMissing finds that the first date in your existing dayfile.txt is earlier than the Records Began Date, it will use that date instead.
 
