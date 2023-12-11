@@ -1,3 +1,7 @@
+1.4.1
+—————
+- Fix daily rainfall bug in 1.4.0
+
 1.4.0
 —————
 - Change to AnyCPU - will now run as 64 bit process on 64 bit OS

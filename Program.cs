@@ -463,7 +463,7 @@ namespace CreateMissing
 									rain = 0;
 								}
 
-								AddLastHoursRainEntry(entrydate, rain, ref rain1hLog, ref rain24hLog);
+								AddLastHoursRainEntry(entrydate, raincounter, ref rain1hLog, ref rain24hLog);
 
 								lastentryrain = rain;
 
@@ -505,7 +505,6 @@ namespace CreateMissing
 								// Special case, the last record of the day is only used for averaging and summation purposes
 								if (entrydate != endTime)
 								{
-
 									// current gust
 									idx = 14;
 									if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.HighGust)
@@ -716,23 +715,24 @@ namespace CreateMissing
 										rec.HighRainRateTime = entrydate;
 									}
 									// total rain - just take the last value - the user may have edited the value during the day
-									rec.TotalRain = raintoday;
+									rec.TotalRain = raintoday * cumulus.CalibRainMult;
 
 									// add last hours rain - the first record of the day has already been added as the last record of the previous day
 									if (entrydate > startTime)
 									{
-										AddLastHoursRainEntry(entrydate, totalRainfall + raintoday, ref rain1hLog, ref rain24hLog);
+										AddLastHoursRainEntry(entrydate, raincounter, ref rain1hLog, ref rain24hLog);
 									}
 
 									// rainfall in last hour
-									rainThisHour = Math.Round(rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter, cumulus.Units.RainDPlaces);
+									rainThisHour = Math.Round((rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
 									if (rainThisHour > rec.HighHourlyRain)
 									{
 										rec.HighHourlyRain = rainThisHour;
 										rec.HighHourlyRainTime = entrydate;
 									}
 
-									rainLast24Hr = Math.Round(rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter, cumulus.Units.RainDPlaces);
+									// rainfall in last 24 hours
+									rainLast24Hr = Math.Round((rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
 									if (rainLast24Hr > rec.HighRain24h)
 									{
 										rec.HighRain24h = rainLast24Hr;
@@ -825,43 +825,45 @@ namespace CreateMissing
 
 									// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
 									// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
-									// after that build the total was reset to zero in the entry
+									// after that build the total was reset to zero in the 00:00 entry
 									// messy!
 									// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
-									var rolloverRain = double.Parse(st[9]);    // 9
-									var rolloverRaincounter = double.Parse(st[11]);  // 11
+									var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
+									var rolloverRaincounter = double.Parse(st[11]);  // 11 - rain counter
 
-									if (rolloverRain > 0)
-									{
-										raintoday = rolloverRain;
-									}
-									if (rolloverRain == 0 && (raincounter - lastentrycounter > 0) && (raincounter - lastentrycounter < counterJumpTooBig))
-									{
-										raintoday += (raincounter - lastentrycounter) * cumulus.CalibRainMult;
-									}
+									rec.TotalRain += (rolloverRaincounter - lastentrycounter) * cumulus.CalibRainMult;
+
+
+									//if (rolloverRain > 0)
+									//{
+									//	raintoday = lastentryrain + rolloverRain;
+									//}
+									//if (rolloverRain == 0 && (raincounter - lastentrycounter > 0) && (raincounter - lastentrycounter < counterJumpTooBig))
+									//{
+									//	raintoday += (raincounter - lastentrycounter) * cumulus.CalibRainMult;
+									//}
 
 									// add last hours rain for this last record.
-									AddLastHoursRainEntry(entrydate, totalRainfall + raintoday, ref rain1hLog, ref rain24hLog);
+									AddLastHoursRainEntry(entrydate, rolloverRaincounter, ref rain1hLog, ref rain24hLog);
 
 									// rainfall in last hour
-									rainThisHour = rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter;
+									rainThisHour = Math.Round((rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
 									if (rainThisHour > rec.HighHourlyRain)
 									{
 										rec.HighHourlyRain = rainThisHour;
 										rec.HighHourlyRainTime = entrydate;
 									}
 
-									rainLast24Hr = rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter;
+									rainLast24Hr = Math.Round((rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
 									if (rainLast24Hr > rec.HighRain24h)
 									{
 										rec.HighRain24h = rainLast24Hr;
-										rec.HighRain24hTime = entrydate;
+										rec.HighRain24hTime = entrydate.AddMinutes(-1); // we want the high rate for the day to be at the end of the day we are closing
 									}
 
-									// total rain - just take the last value - the user may have edited the value during the day
-									rec.TotalRain = raintoday;
-
-									totalRainfall += raintoday;
+									// total rain
+									totalRainfall += rec.TotalRain;
+									lastentrycounter = raincounter;
 
 									// flag we are done with this record
 									finished = true;
@@ -920,7 +922,7 @@ namespace CreateMissing
 						return rec;
 					}
 
-					return null;
+					//return null;
 				}
 				if (fileDate > date)
 				{
@@ -1024,10 +1026,10 @@ namespace CreateMissing
 						{
 							// process each record in the file
 							// first a sanity check for an empty line!
-							if (string.IsNullOrWhiteSpace(CurrentLogLines[CurrentLogLineNum]))
+							if (string.IsNullOrWhiteSpace(CurrentLogLines[CurrentSolarLogLineNum]))
 							{
-								CurrentLogLineNum++;
-								LogMessage($"Solar: Error at line {CurrentLogLineNum}, an empty line was detected!");
+								CurrentSolarLogLineNum++;
+								LogMessage($"Solar: Error at line {CurrentSolarLogLineNum}, an empty line was detected!");
 								continue;
 							}
 
@@ -1367,7 +1369,7 @@ namespace CreateMissing
 				h24Queue.Dequeue();
 			}
 		}
-		}
+	}
 
 
 	class LastHourRainLog

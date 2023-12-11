@@ -63,11 +63,13 @@ namespace CreateMissing
 					using (var sr = new StreamReader(dayFileName))
 					{
 						var lastDate = DateTime.MinValue;
+
 						do
 						{
 							try
 							{
 								// process each record in the file
+
 
 								linenum++;
 								string Line = sr.ReadLine();
@@ -79,7 +81,7 @@ namespace CreateMissing
 									Program.LogMessage($"LoadDayFile: Error - Date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
 									Console.WriteLine();
 									Program.LogConsole($"Error, date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'", ConsoleColor.Red);
-									Environment.Exit(3);
+									errorCount++;
 								}
 
 								// sanity check if this date has already been added
@@ -94,7 +96,10 @@ namespace CreateMissing
 									Environment.Exit(4);
 								}
 
-								DayfileRecs.Add(newRec);
+								if (errorCount == 0)
+								{
+									DayfileRecs.Add(newRec);
+								}
 
 								lastDate = newRec.Date;
 
@@ -114,7 +119,7 @@ namespace CreateMissing
 									Environment.Exit(5);
 								}
 							}
-						} while (!(sr.EndOfStream || errorCount >= 20));
+						} while (!sr.EndOfStream);
 					}
 				}
 				catch (Exception e)
@@ -122,6 +127,12 @@ namespace CreateMissing
 					Program.LogMessage($"LoadDayFile: Error at line {linenum} of {dayFileName} : {e.Message}");
 					Program.LogMessage("Please edit the file to correct the error");
 				}
+
+				if (errorCount > 0)
+				{
+					Environment.Exit(3);
+				}
+
 				Program.LogMessage($"LoadDayFile: Loaded {addedEntries} entries to the daily data list");
 				Console.WriteLine($"Loaded {addedEntries} entries to the daily data list");
 			}
