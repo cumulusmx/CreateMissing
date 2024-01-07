@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace CreateMissing
 {
@@ -33,6 +34,9 @@ namespace CreateMissing
 
 		static void Main()
 		{
+#if DEBUG
+			//Thread.CurrentThread.CurrentCulture = new CultureInfo("nl-NL");
+#endif
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener($"MXdiags{Path.DirectorySeparatorChar}CreateMissing-{DateTime.Now:yyyyMMdd-HHmmss}.txt", "CMlog");
 			Trace.Listeners.Add(myTextListener);
 			Trace.AutoFlush = true;
@@ -900,6 +904,8 @@ namespace CreateMissing
 					{
 						LogMessage($"LogFile: Error at line {CurrentLogLineNum}, field {idx + 1} of {fileName} : {e.Message}");
 						LogMessage("LogFile: Please edit the file to correct the error");
+						LogMessage("LogFile: Line = " + CurrentLogLines[CurrentLogLineNum - 1]);
+
 						LogConsole($"Error at line {CurrentLogLineNum}, field {idx + 1} of {fileName} : {e.Message}", ConsoleColor.Red);
 						LogConsole("Please edit the file to correct the error", ConsoleColor.Red);
 
@@ -995,7 +1001,6 @@ namespace CreateMissing
 			// 27  Feels like
 			// 28  Humidex
 
-
 			while (!finished)
 			{
 				if (File.Exists(fileName))
@@ -1009,7 +1014,6 @@ namespace CreateMissing
 						Utils.GetLogFileSeparators(fileName, CultureInfo.CurrentCulture.TextInfo.ListSeparator, out dayfile.FieldSep, out dayfile.DateSep);
 					}
 
-
 					try
 					{
 						if (CurrentSolarLogName != fileName)
@@ -1017,16 +1021,27 @@ namespace CreateMissing
 							LogMessage($"Solar: Loading log file - {fileName}");
 
 							CurrentSolarLogLines.Clear();
+							CurrentSolarLogLines.TrimExcess();
 							CurrentSolarLogLines.AddRange(File.ReadAllLines(fileName));
 							CurrentSolarLogName = fileName;
 							CurrentSolarLogLineNum = 0;
+							LogMessage($"Solar: List capacity: {CurrentSolarLogLines.Capacity}, count: {CurrentSolarLogLines.Count}");
 						}
+					}
+					catch (Exception ex)
+					{
+						LogMessage($"Solar: Loading log file - {fileName}, msg: {ex.Message}");
+						LogMessage($"Solar: List capacity: {CurrentSolarLogLines.Capacity}, count: {CurrentSolarLogLines.Count}");
+						Environment.Exit(1);
+					}
 
+					try
+					{
 						while (CurrentSolarLogLineNum < CurrentSolarLogLines.Count)
 						{
 							// process each record in the file
 							// first a sanity check for an empty line!
-							if (string.IsNullOrWhiteSpace(CurrentLogLines[CurrentSolarLogLineNum]))
+							if (string.IsNullOrWhiteSpace(CurrentSolarLogLines[CurrentSolarLogLineNum]))
 							{
 								CurrentSolarLogLineNum++;
 								LogMessage($"Solar: Error at line {CurrentSolarLogLineNum}, an empty line was detected!");
@@ -1034,24 +1049,59 @@ namespace CreateMissing
 							}
 
 							// Regex is very expensive, let's assume the separator is always a single character
-							var st = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(dayfile.FieldSep[0]));
-							var entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
+							var ut = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(dayfile.FieldSep[0]));
 
-							// Solar for 9am days is 00:00 the previous day to midnight the current day!
-							if (entrydate > solarStartTime && entrydate <= solarEndTime)
+							if (ut.Count < 10)
 							{
-								// we are just getting the solar values to midnight
-								ExtractSolarData(st, ref rec, entrydate);
-								started = true;
+								LogMessage($"Solar: Error at line {CurrentSolarLogLineNum + 1}, Number of fields less tha 10!");
+								LogMessage("Solar: Line = " + CurrentSolarLogLines[CurrentSolarLogLineNum]);
+								CurrentSolarLogLineNum++;
+								continue;
 							}
-							else if (started)
-							{
-								if (CurrentSolarLogLineNum > 0)
-								{
-									CurrentSolarLogLineNum--;
-								}
 
-								return rec;
+							try
+							{
+								var entrydate = Utils.DdmmyyhhmmStrToDate(ut[0], ut[1]);
+
+								// Solar for 9am days is 00:00 the previous day to midnight the current day!
+								if (entrydate > solarStartTime && entrydate <= solarEndTime)
+								{
+									// we are just getting the solar values to midnight
+									ExtractSolarData(ut, ref rec, entrydate);
+									started = true;
+								}
+								else if (started)
+								{
+									if (CurrentSolarLogLineNum > 0)
+									{
+										CurrentSolarLogLineNum--;
+									}
+
+									return rec;
+								}
+							}
+							catch (IndexOutOfRangeException ex)
+							{
+								LogMessage($"Solar: Index Error at line {CurrentSolarLogLineNum + 1} of {fileName}");
+								LogMessage("Solar: Line = " + CurrentSolarLogLines[CurrentSolarLogLineNum]);
+								LogMessage($"Solar: Line List count = {ut.Count}, content = {string.Join(" ", ut.ToArray())}");
+								LogMessage(ex.ToString());
+
+								LogConsole($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {ex.Message}", ConsoleColor.Red);
+								LogConsole("Please edit the file to correct the error", ConsoleColor.Red);
+
+								Environment.Exit(1);
+							}
+							catch (Exception ex)
+							{
+								LogMessage($"Solar: {ex.Message} Error at line {CurrentSolarLogLineNum + 1} of {fileName}");
+								LogMessage("Solar: Line = " + CurrentSolarLogLines[CurrentSolarLogLineNum]);
+								LogMessage(ex.ToString());
+
+								LogConsole($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {ex.Message}", ConsoleColor.Red);
+								LogConsole("Please edit the file to correct the error", ConsoleColor.Red);
+
+								Environment.Exit(1);
 							}
 
 							CurrentSolarLogLineNum++;
@@ -1059,8 +1109,11 @@ namespace CreateMissing
 					}
 					catch (Exception e)
 					{
-						LogMessage($"Solar: Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}");
+						LogMessage($"Solar: Error at line {CurrentSolarLogLineNum + 1} of {fileName}");
+						LogMessage("Solar: Line = " + CurrentSolarLogLines[CurrentSolarLogLineNum]);
 						LogMessage("Solar: Please edit the file to correct the error");
+						LogMessage(e.ToString());
+
 						LogConsole($"Error at line {CurrentSolarLogLineNum + 1} of {fileName} : {e.Message}", ConsoleColor.Red);
 						LogConsole("Please edit the file to correct the error", ConsoleColor.Red);
 
@@ -1269,27 +1322,40 @@ namespace CreateMissing
 		{
 			double valDbl;
 			int valInt;
-			// hours of sunshine
-			if (st.Count > 23 && double.TryParse(st[23], out valDbl) && valDbl > rec.SunShineHours)
+			int idx = 0;
+			try
 			{
-				rec.SunShineHours = valDbl;
+				// hours of sunshine
+				idx = 23;
+				if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.SunShineHours)
+				{
+					rec.SunShineHours = valDbl;
+				}
+				// hi UV-I
+				idx = 17;
+				if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.HighUv)
+				{
+					rec.HighUv = valDbl;
+					rec.HighUvTime = entrydate;
+				}
+				// hi solar
+				idx = 18;
+				if (st.Count > idx && int.TryParse(st[idx], out valInt) && valInt > rec.HighSolar)
+				{
+					rec.HighSolar = valInt;
+					rec.HighSolarTime = entrydate;
+				}
+				// ET
+				idx = 19;
+				if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.ET)
+				{
+					rec.ET = valDbl;
+				}
 			}
-			// hi UV-I
-			if (st.Count > 17 && double.TryParse(st[17], out valDbl) && valDbl > rec.HighUv)
+			catch (Exception ex)
 			{
-				rec.HighUv = valDbl;
-				rec.HighUvTime = entrydate;
-			}
-			// hi solar
-			if (st.Count > 18 && int.TryParse(st[18], out valInt) && valInt > rec.HighSolar)
-			{
-				rec.HighSolar = valInt;
-				rec.HighSolarTime = entrydate;
-			}
-			// ET
-			if (st.Count > 19 && double.TryParse(st[19], out valDbl) && valDbl > rec.ET)
-			{
-				rec.ET = valDbl;
+				LogMessage($"Solar: Error at field {idx}: {ex.Message}");
+				throw;
 			}
 		}
 
