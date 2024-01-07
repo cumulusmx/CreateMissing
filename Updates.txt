@@ -1,3 +1,7 @@
+1.4.2
+—————
+- Fix crash in solar data
+
 1.4.1
 —————
 - Fix daily rainfall bug in 1.4.0

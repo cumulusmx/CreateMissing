@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyVersion>$(PackageVersion)</AssemblyVersion>
     <FileVersion>$(PackageVersion)</FileVersion>
-    <Version>1.4.1</Version>
+    <Version>1.4.2</Version>
     <StartupObject>CreateMissing.Program</StartupObject>
     <TargetFramework>net48</TargetFramework>
     <Authors>Mark Crossley</Authors>
