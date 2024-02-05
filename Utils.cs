@@ -60,7 +60,7 @@ namespace CreateMissing
 			return new DateTime(date.Year, date.Month, date.Day, int.Parse(tim[0]), int.Parse(tim[1]), 0);
 		}
 
-		public static double ConvertUserTempToC(double value)
+		public static double UserTempToC(double value)
 		{
 			if (Program.cumulus.Units.Temp == 1)
 			{
@@ -73,7 +73,20 @@ namespace CreateMissing
 			}
 		}
 
-		public static double ConvertUserWindToKPH(double wind) // input is in Units.Wind units, convert to km/h
+		public static double TempCToUser(double value)
+		{
+			if (Program.cumulus.Units.Temp == 1)
+			{
+				return MeteoLib.CToF(value);
+			}
+			else
+			{
+				// C
+				return value;
+			}
+		}
+
+		public static double UserWindToKPH(double wind) // input is in Units.Wind units, convert to km/h
 		{
 			switch (Program.cumulus.Units.Wind)
 			{
@@ -94,7 +107,7 @@ namespace CreateMissing
 			};
 		}
 
-		public static double ConvertUserWindToMS(double value)
+		public static double UserWindToMS(double value)
 		{
 			switch (Program.cumulus.Units.Wind)
 			{
@@ -109,6 +122,23 @@ namespace CreateMissing
 				default:
 					return 0;
 			};
+		}
+
+		public static double WindMSToUser(double value)
+		{
+			switch (Program.cumulus.Units.Wind)
+			{
+				case 0:
+					return value;
+				case 1:
+					return value * 2.23693629;
+				case 2:
+					return value * 3.6;
+				case 3:
+					return value * 1.94384449;
+				default:
+					return 0;
+			}
 		}
 
 		public static int CalcAvgBearing(double x, double y)

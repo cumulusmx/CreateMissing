@@ -1,3 +1,7 @@
+1.4.3
+—————
+- Fix for derived temperatures (wind chill, feels like, apparanent) when using farenheit
+
 1.4.2
 —————
 - Fix crash in solar data

@@ -535,7 +535,7 @@ namespace CreateMissing
 									// not logged, calculate it
 									else
 									{
-										var wchill = MeteoLib.WindChill(Utils.ConvertUserTempToC(outsidetemp), Utils.ConvertUserWindToKPH(speed));
+										var wchill = Utils.TempCToUser(MeteoLib.WindChill(Utils.UserTempToC(outsidetemp), Utils.UserWindToKPH(speed)));
 										if (wchill < rec.LowWindChill)
 										{
 											rec.LowWindChill = wchill;
@@ -552,7 +552,7 @@ namespace CreateMissing
 									// not logged, calculate it
 									else
 									{
-										var heatIndex = MeteoLib.HeatIndex(Utils.ConvertUserTempToC(outsidetemp), hum);
+										var heatIndex = Utils.TempCToUser(MeteoLib.HeatIndex(Utils.UserTempToC(outsidetemp), hum));
 										if (heatIndex > rec.HighHeatIndex)
 										{
 											rec.HighHeatIndex = heatIndex;
@@ -577,7 +577,7 @@ namespace CreateMissing
 									// no logged apparent, calculate it
 									else
 									{
-										var apparent = MeteoLib.ApparentTemperature(Utils.ConvertUserTempToC(outsidetemp), Utils.ConvertUserWindToMS(speed), hum);
+										var apparent = Utils.TempCToUser(MeteoLib.ApparentTemperature(Utils.UserTempToC(outsidetemp), Utils.UserWindToMS(speed), hum));
 										if (apparent > rec.HighAppTemp)
 										{
 											rec.HighAppTemp = apparent;
@@ -609,7 +609,7 @@ namespace CreateMissing
 									// no logged feels like data available, calculate it
 									else
 									{
-										var feels = MeteoLib.FeelsLike(Utils.ConvertUserTempToC(outsidetemp), Utils.ConvertUserWindToKPH(speed), hum);
+										var feels = Utils.TempCToUser(MeteoLib.FeelsLike(Utils.UserTempToC(outsidetemp), Utils.UserWindToKPH(speed), hum));
 										if (feels > rec.HighFeelsLike)
 										{
 											rec.HighFeelsLike = feels;
@@ -635,7 +635,7 @@ namespace CreateMissing
 									// no logged humidex available, calculate it
 									else
 									{
-										var humidex = MeteoLib.Humidex(Utils.ConvertUserTempToC(outsidetemp), hum);
+										var humidex = Utils.TempCToUser(MeteoLib.Humidex(Utils.UserTempToC(outsidetemp), hum));
 										if (humidex > rec.HighHumidex)
 										{
 											rec.HighHumidex = humidex;
