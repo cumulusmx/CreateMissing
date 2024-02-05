@@ -17,11 +17,11 @@ namespace CreateMissing
 		private static ConsoleColor defConsoleColour;
 
 		private static DayFile dayfile;
-		private static readonly List<string> CurrentLogLines = new List<string>();
+		private static readonly List<string> CurrentLogLines = [];
 		private static string CurrentLogName;
 		private static int CurrentLogLineNum = 0;
 
-		private static readonly List<string> CurrentSolarLogLines = new List<string>();
+		private static readonly List<string> CurrentSolarLogLines = [];
 		private static string CurrentSolarLogName;
 		private static int CurrentSolarLogLineNum = 0;
 
@@ -199,7 +199,7 @@ namespace CreateMissing
 				}
 			}
 
-			currDate = IncrementMeteoDate(dayfile.DayfileRecs[dayfile.DayfileRecs.Count - 1].Date);
+			currDate = IncrementMeteoDate(dayfile.DayfileRecs[^1].Date);
 			// We need the last total chill hours to increment if there are missing records at the end of the day file
 			// check if total chill hours needs to be reset
 			if (currDate.Month == cumulus.ChillHourSeasonStart && currDate.Day == 1)
@@ -208,7 +208,7 @@ namespace CreateMissing
 			}
 			else
 			{
-				TotalChillHours = dayfile.DayfileRecs[dayfile.DayfileRecs.Count - 1].ChillHours;
+				TotalChillHours = dayfile.DayfileRecs[^1].ChillHours;
 			}
 
 			// that is the dayfile processed, but what if it had missing records at the end?
@@ -389,9 +389,6 @@ namespace CreateMissing
 					if (dayfile.LineEnding == string.Empty)
 					{
 						Utils.TryDetectNewLine(fileName, out dayfile.LineEnding);
-
-						// determine the dayfile field and date separators
-						Utils.GetLogFileSeparators(fileName, CultureInfo.CurrentCulture.TextInfo.ListSeparator, out dayfile.FieldSep, out dayfile.DateSep);
 					}
 
 
@@ -424,7 +421,7 @@ namespace CreateMissing
 
 							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator));
 							// Regex is very expensive, let's assume the separator is always a single character
-							var st = new List<string>(CurrentLogLines[CurrentLogLineNum++].Split(dayfile.FieldSep[0]));
+							var st = new List<string>(CurrentLogLines[CurrentLogLineNum++].Split(','));
 							var entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
 
 							if (entrydate < startTimeMinus1)
@@ -1009,9 +1006,6 @@ namespace CreateMissing
 					if (dayfile.LineEnding == string.Empty)
 					{
 						Utils.TryDetectNewLine(fileName, out dayfile.LineEnding);
-
-						// determine the dayfile field and date separators
-						Utils.GetLogFileSeparators(fileName, CultureInfo.CurrentCulture.TextInfo.ListSeparator, out dayfile.FieldSep, out dayfile.DateSep);
 					}
 
 					try
@@ -1049,7 +1043,7 @@ namespace CreateMissing
 							}
 
 							// Regex is very expensive, let's assume the separator is always a single character
-							var ut = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(dayfile.FieldSep[0]));
+							var ut = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(','));
 
 							if (ut.Count < 10)
 							{
@@ -1313,9 +1307,16 @@ namespace CreateMissing
 
 		private static string GetLogFileName(DateTime thedate)
 		{
-			var datestring = thedate.ToString("MMMyy").Replace(".", "");
+			// First determine the date for the log file.
+			// If we're using 9am roll-over, the date should be 9 hours (10 in summer)
+			// before 'Now'
+			var logfiledate = thedate.AddHours(cumulus.GetHourInc(thedate));
+
+
+			var datestring = logfiledate.ToString("yyyyMM");
 
 			return location + "data" + Path.DirectorySeparatorChar + datestring + "log.txt";
+
 		}
 
 		private static void ExtractSolarData(List<string> st, ref Dayfilerec rec, DateTime entrydate)
@@ -1438,17 +1439,9 @@ namespace CreateMissing
 	}
 
 
-	class LastHourRainLog
+	class LastHourRainLog(DateTime ts, double rain)
 	{
-		public readonly DateTime Timestamp;
-		public readonly double Raincounter;
-
-		public LastHourRainLog(DateTime ts, double rain)
-		{
-			Timestamp = ts;
-			Raincounter = rain;
-		}
+		public readonly DateTime Timestamp = ts;
+		public readonly double Raincounter = rain;
 	}
-
-
 }
