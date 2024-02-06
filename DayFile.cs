@@ -37,6 +37,7 @@ namespace CreateMissing
 		public void LoadDayFile()
 		{
 			int addedEntries = 0;
+			var inv = CultureInfo.InvariantCulture;
 
 			Program.LogMessage($"LoadDayFile: Attempting to load the day file");
 			Console.WriteLine("Attempting to load the day file");
@@ -56,67 +57,65 @@ namespace CreateMissing
 
 				try
 				{
-					using (var sr = new StreamReader(dayFileName))
+					using var sr = new StreamReader(dayFileName);
+					var lastDate = DateTime.MinValue;
+
+					do
 					{
-						var lastDate = DateTime.MinValue;
-
-						do
+						try
 						{
-							try
+							// process each record in the file
+
+
+							linenum++;
+							string Line = sr.ReadLine();
+							var newRec = ParseDayFileRec(Line);
+
+							// sanity check if this date is in sequence
+							if (newRec.Date < lastDate)
 							{
-								// process each record in the file
-
-
-								linenum++;
-								string Line = sr.ReadLine();
-								var newRec = ParseDayFileRec(Line);
-
-								// sanity check if this date is in sequence
-								if (newRec.Date < lastDate)
-								{
-									Program.LogMessage($"LoadDayFile: Error - Date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
-									Console.WriteLine();
-									Program.LogConsole($"Error, date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'", ConsoleColor.Red);
-									errorCount++;
-								}
-
-								// sanity check if this date has already been added
-								//var matches = DayfileRecs.Where(p => p.Date == newRec.Date).ToList();
-								// (matches.Count > 0)
-								//Since we now know the order is correct, we can do a simple date compare
-								if (newRec.Date == lastDate)
-								{
-									Program.LogMessage($"LoadDayFile: Error - Duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'");
-									Console.WriteLine();
-									Program.LogConsole($"Error, duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd" + DateSep + "MM" + DateSep + "yy")}'", ConsoleColor.Red);
-									Environment.Exit(4);
-								}
-
-								if (errorCount == 0)
-								{
-									DayfileRecs.Add(newRec);
-								}
-
-								lastDate = newRec.Date;
-
-								addedEntries++;
-							}
-							catch (Exception e)
-							{
-								Program.LogMessage($"LoadDayFile: Error at line {linenum} of {dayFileName} : {e.Message}");
-								Program.LogMessage("Please edit the file to correct the error");
+								Program.LogMessage($"LoadDayFile: Error - Date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd/MM/yy", inv)}'");
+								Console.WriteLine();
+								Program.LogConsole($"Error, date is out of order at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd/MM/yy", inv)}'", ConsoleColor.Red);
 								errorCount++;
-								if (errorCount >= 20)
-								{
-									Program.LogMessage($"LoadDayFile: Too many errors reading {dayFileName} - aborting load of daily data");
-									Console.WriteLine();
-									Program.LogConsole($"Too many errors reading {dayFileName} - aborting load of daily data", ConsoleColor.Red);
-									Program.LogConsole("Please see the log file for more details", ConsoleColor.Red);
-									Environment.Exit(5);
-								}
 							}
-						} while (!sr.EndOfStream);
-					}
+
+							// sanity check if this date has already been added
+							//var matches = DayfileRecs.Where(p => p.Date == newRec.Date).ToList();
+							// (matches.Count > 0)
+							//Since we now know the order is correct, we can do a simple date compare
+							if (newRec.Date == lastDate)
+							{
+								Program.LogMessage($"LoadDayFile: Error - Duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd/MM/yy", inv)}'");
+								Console.WriteLine();
+								Program.LogConsole($"Error, duplicate date at line {linenum} of {dayFileName}, '{newRec.Date.ToString("dd/MM/yy", inv)}'", ConsoleColor.Red);
+								Environment.Exit(4);
+							}
+
+							if (errorCount == 0)
+							{
+								DayfileRecs.Add(newRec);
+							}
+
+							lastDate = newRec.Date;
+
+							addedEntries++;
+						}
+						catch (Exception e)
+						{
+							Program.LogMessage($"LoadDayFile: Error at line {linenum} of {dayFileName} : {e.Message}");
+							Program.LogMessage("Please edit the file to correct the error");
+							errorCount++;
+							if (errorCount >= 20)
+							{
+								Program.LogMessage($"LoadDayFile: Too many errors reading {dayFileName} - aborting load of daily data");
+								Console.WriteLine();
+								Program.LogConsole($"Too many errors reading {dayFileName} - aborting load of daily data", ConsoleColor.Red);
+								Program.LogConsole("Please see the log file for more details", ConsoleColor.Red);
+								Environment.Exit(5);
+							}
+						}
+					} while (!sr.EndOfStream);
 				}
 				catch (Exception e)
 				{
@@ -157,22 +156,20 @@ namespace CreateMissing
 
 			try
 			{
-				using (FileStream fs = new FileStream(dayFileName, FileMode.Append, FileAccess.Write, FileShare.Read))
-				using (StreamWriter file = new StreamWriter(fs))
+				using FileStream fs = new FileStream(dayFileName, FileMode.Append, FileAccess.Write, FileShare.Read);
+				using StreamWriter file = new StreamWriter(fs);
+				Program.LogMessage("Dayfile.txt opened for writing");
+
+				file.NewLine = LineEnding;
+
+				foreach (var rec in DayfileRecs)
 				{
-					Program.LogMessage("Dayfile.txt opened for writing");
-
-					file.NewLine = LineEnding;
-
-					foreach (var rec in DayfileRecs)
-					{
-						var line = RecToCsv(rec);
-						if (null != line)
-							file.WriteLine(line);
-					}
-
-					file.Close();
+					var line = RecToCsv(rec);
+					if (null != line)
+						file.WriteLine(line);
 				}
+
+				file.Close();
 			}
 			catch (Exception ex)
 			{
