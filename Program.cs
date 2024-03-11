@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace CreateMissing
 {
-	class Program
+	static class Program
 	{
 		public static Cumulus cumulus;
 		public static string location;
@@ -33,7 +33,7 @@ namespace CreateMissing
 		static void Main()
 		{
 #if DEBUG
-			//Thread.CurrentThread.CurrentCulture = new CultureInfo("nl-NL");
+			//Thread.CurrentThread.CurrentCulture = new CultureInfo("nl-NL")
 #endif
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener($"MXdiags{Path.DirectorySeparatorChar}CreateMissing-{DateTime.Now:yyyyMMdd-HHmmss}.txt", "CMlog");
 			Trace.Listeners.Add(myTextListener);
@@ -417,7 +417,7 @@ namespace CreateMissing
 								continue;
 							}
 
-							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator));
+							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator))
 							// Regex is very expensive, let's assume the separator is always a single character
 							var st = new List<string>(CurrentLogLines[CurrentLogLineNum++].Split(','));
 							var entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
@@ -827,7 +827,7 @@ namespace CreateMissing
 									// after that build the total was reset to zero in the 00:00 entry
 									// messy!
 									// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
-									var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
+									//var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
 									var rolloverRaincounter = double.Parse(st[11]);  // 11 - rain counter
 
 									rec.TotalRain += (rolloverRaincounter - lastentrycounter) * cumulus.CalibRainMult;
@@ -922,8 +922,6 @@ namespace CreateMissing
 
 						return rec;
 					}
-
-					//return null;
 				}
 				if (fileDate > date)
 				{
@@ -1371,7 +1369,7 @@ namespace CreateMissing
 				TimeZoneInfo tz = TimeZoneInfo.Local;
 
 				// Date without time
-				DateTime rawDate = new DateTime(thedate.Year, thedate.Month, thedate.Day);
+				DateTime rawDate = new DateTime(thedate.Year, thedate.Month, thedate.Day, 0, 0, 0, DateTimeKind.Local);
 
 				if (cumulus.Use10amInSummer && tz.IsDaylightSavingTime(thedate))
 				{
