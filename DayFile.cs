@@ -81,7 +81,7 @@ namespace CreateMissing
 							}
 
 							// sanity check if this date has already been added
-							//var matches = DayfileRecs.Where(p => p.Date == newRec.Date).ToList();
+							//var matches = DayfileRecs.Where(p => p.Date == newRec.Date).ToList()
 							// (matches.Count > 0)
 							//Since we now know the order is correct, we can do a simple date compare
 							if (newRec.Date == lastDate)
@@ -249,7 +249,7 @@ namespace CreateMissing
 
 			if (rec.HighGust == -9999)
 				return null;
-				//strb.Append("0.0" + listsep + "0" + listsep + "00:00" + listsep);
+				//strb.Append("0.0" + listsep + "0" + listsep + "00:00" + listsep)
 			else
 			{
 				strb.Append(rec.HighGust.ToString(Program.cumulus.WindFormat, inv) + sep);
@@ -259,7 +259,7 @@ namespace CreateMissing
 
 			if (rec.LowTemp == 9999)
 				return null;
-				//strb.Append("0.0" + listsep + "00:00" + listsep);
+				//strb.Append("0.0" + listsep + "00:00" + listsep)
 			else
 			{
 				strb.Append(rec.LowTemp.ToString(Program.cumulus.TempFormat, inv) + sep);
@@ -268,7 +268,7 @@ namespace CreateMissing
 
 			if (rec.HighTemp == -9999)
 				return null;
-				//strb.Append("0.0" + listsep + "00:00" + listsep);
+				//strb.Append("0.0" + listsep + "00:00" + listsep)
 			else
 			{
 				strb.Append(rec.HighTemp.ToString(Program.cumulus.TempFormat, inv) + sep);
@@ -277,7 +277,7 @@ namespace CreateMissing
 
 			if (rec.LowPress == 9999)
 				return null;
-				//strb.Append("0.0" + listsep + "00:00" + listsep);
+				//strb.Append("0.0" + listsep + "00:00" + listsep)
 			else
 			{
 				strb.Append(rec.LowPress.ToString(Program.cumulus.PressFormat, inv) + sep);
@@ -286,7 +286,7 @@ namespace CreateMissing
 
 			if (rec.HighPress == -9999)
 				return null;
-				//strb.Append("0.0" + listsep + "00:00" + listsep);
+				//strb.Append("0.0" + listsep + "00:00" + listsep)
 			else
 			{
 				strb.Append(rec.HighPress.ToString(Program.cumulus.PressFormat, inv) + sep);
@@ -295,7 +295,7 @@ namespace CreateMissing
 
 			if (rec.HighRainRate == -9999)
 				return null;
-				//strb.Append("0.0" + listsep + "00:00" + listsep);
+				//strb.Append("0.0" + listsep + "00:00" + listsep)
 			else
 			{
 				strb.Append(rec.HighRainRate.ToString(Program.cumulus.RainFormat, inv) + sep);
@@ -304,7 +304,7 @@ namespace CreateMissing
 
 			if (rec.TotalRain == -9999)
 				return null;
-				//strb.Append("0.0" + listsep);
+				//strb.Append("0.0" + listsep)
 			else
 				strb.Append(rec.TotalRain.ToString(Program.cumulus.RainFormat, inv) + sep);
 
@@ -615,61 +615,61 @@ namespace CreateMissing
 
 	public class Dayfilerec
 	{
-		public DateTime Date;
-		public double HighGust;
-		public int HighGustBearing;
-		public DateTime HighGustTime;
-		public double LowTemp;
-		public DateTime LowTempTime;
-		public double HighTemp;
-		public DateTime HighTempTime;
-		public double LowPress;
-		public DateTime LowPressTime;
-		public double HighPress;
-		public DateTime HighPressTime;
-		public double HighRainRate;
-		public DateTime HighRainRateTime;
-		public double TotalRain;
-		public double AvgTemp;
-		public double WindRun;
-		public double HighAvgWind;
-		public DateTime HighAvgWindTime;
-		public int LowHumidity;
-		public DateTime LowHumidityTime;
-		public int HighHumidity;
-		public DateTime HighHumidityTime;
-		public double ET;
-		public double SunShineHours;
-		public double HighHeatIndex;
-		public DateTime HighHeatIndexTime;
-		public double HighAppTemp;
-		public DateTime HighAppTempTime;
-		public double LowAppTemp;
-		public DateTime LowAppTempTime;
-		public double HighHourlyRain;
-		public DateTime HighHourlyRainTime;
-		public double LowWindChill;
-		public DateTime LowWindChillTime;
-		public double HighDewPoint;
-		public DateTime HighDewPointTime;
-		public double LowDewPoint;
-		public DateTime LowDewPointTime;
-		public int DominantWindBearing;
-		public double HeatingDegreeDays;
-		public double CoolingDegreeDays;
-		public int HighSolar;
-		public DateTime HighSolarTime;
-		public double HighUv;
-		public DateTime HighUvTime;
-		public double HighFeelsLike;
-		public DateTime HighFeelsLikeTime;
-		public double LowFeelsLike;
-		public DateTime LowFeelsLikeTime;
-		public double HighHumidex;
-		public DateTime HighHumidexTime;
-		public double ChillHours;
-		public double HighRain24h;
-		public DateTime HighRain24hTime;
+		public DateTime Date { get; set; }
+		public double HighGust { get; set; }
+		public int HighGustBearing { get; set; }
+		public DateTime HighGustTime { get; set; }
+		public double LowTemp { get; set; }
+		public DateTime LowTempTime { get; set; }
+		public double HighTemp { get; set; }
+		public DateTime HighTempTime { get; set; }
+		public double LowPress { get; set; }
+		public DateTime LowPressTime { get; set; }
+		public double HighPress { get; set; }
+		public DateTime HighPressTime { get; set; }
+		public double HighRainRate { get; set; }
+		public DateTime HighRainRateTime { get; set; }
+		public double TotalRain { get; set; }
+		public double AvgTemp { get; set; }
+		public double WindRun { get; set; }
+		public double HighAvgWind { get; set; }
+		public DateTime HighAvgWindTime { get; set; }
+		public int LowHumidity { get; set; }
+		public DateTime LowHumidityTime { get; set; }
+		public int HighHumidity { get; set; }
+		public DateTime HighHumidityTime { get; set; }
+		public double ET { get; set; }
+		public double SunShineHours { get; set; }
+		public double HighHeatIndex { get; set; }
+		public DateTime HighHeatIndexTime { get; set; }
+		public double HighAppTemp { get; set; }
+		public DateTime HighAppTempTime { get; set; }
+		public double LowAppTemp { get; set; }
+		public DateTime LowAppTempTime { get; set; }
+		public double HighHourlyRain { get; set; }
+		public DateTime HighHourlyRainTime { get; set; }
+		public double LowWindChill { get; set; }
+		public DateTime LowWindChillTime { get; set; }
+		public double HighDewPoint { get; set; }
+		public DateTime HighDewPointTime { get; set; }
+		public double LowDewPoint { get; set; }
+		public DateTime LowDewPointTime { get; set; }
+		public int DominantWindBearing { get; set; }
+		public double HeatingDegreeDays { get; set; }
+		public double CoolingDegreeDays { get; set; }
+		public int HighSolar { get; set; }
+		public DateTime HighSolarTime { get; set; }
+		public double HighUv { get; set; }
+		public DateTime HighUvTime { get; set; }
+		public double HighFeelsLike { get; set; }
+		public DateTime HighFeelsLikeTime { get; set; }
+		public double LowFeelsLike { get; set; }
+		public DateTime LowFeelsLikeTime { get; set; }
+		public double HighHumidex { get; set; }
+		public DateTime HighHumidexTime { get; set; }
+		public double ChillHours { get; set; }
+		public double HighRain24h { get; set; }
+		public DateTime HighRain24hTime { get; set; }
 
 		public Dayfilerec()
 		{

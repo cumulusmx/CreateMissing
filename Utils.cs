@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace CreateMissing
 {
-	class Utils
+	static class Utils
 	{
 		public static DateTime DdmmyyStrToDate(string d)
 		{
@@ -28,8 +28,8 @@ namespace CreateMissing
 
 		public static DateTime GetDateTime(DateTime date, string time)
 		{
-			var tim = time.Split(',');
-			return new DateTime(date.Year, date.Month, date.Day, int.Parse(tim[0]), int.Parse(tim[1]), 0);
+			var tim = time.Split(':');
+			return new DateTime(date.Year, date.Month, date.Day, int.Parse(tim[0]), int.Parse(tim[1]), 0, DateTimeKind.Local);
 		}
 
 		public static double UserTempToC(double value)
