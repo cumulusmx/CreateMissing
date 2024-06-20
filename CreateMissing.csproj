@@ -1,23 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyVersion>$(PackageVersion)</AssemblyVersion>
     <FileVersion>$(PackageVersion)</FileVersion>
-    <Version>1.4.3</Version>
+    <Version>2.0.1.0003</Version>
     <StartupObject>CreateMissing.Program</StartupObject>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Authors>Mark Crossley</Authors>
     <Company>Cumulus MX</Company>
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
-
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="if $(ConfigurationName)==Release (&#xD;&#xA;echo.&#xD;&#xA;echo Update Distribution folder&#xD;&#xA;echo copy .exe&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;echo copy .config&#xD;&#xA;xcopy &quot;$(TargetPath).config&quot; &quot;$(SolutionDir)..\CumulusMX-Dist\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;)" />
+    <Exec Command="if $(ConfigurationName)==Release (&#xD;&#xA;echo.&#xD;&#xA;echo Update Distribution folder&#xD;&#xA;echo copy .exe&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;xcopy &quot;$(OutputPath)\CreateMissing.exe&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;&#xD;&#xA;echo copy .config&#xD;&#xA;xcopy &quot;$(OutputPath)\CreateMissing.runtimeconfig.json&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;)" />
   </Target>
-
 </Project>

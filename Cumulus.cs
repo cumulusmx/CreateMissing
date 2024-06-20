@@ -162,6 +162,34 @@ namespace CreateMissing
 			}
 		}
 
+		public int GetHourInc(DateTime timestamp)
+		{
+			if (RolloverHour == 0)
+			{
+				return 0;
+			}
+			else
+			{
+				try
+				{
+					if (Use10amInSummer && TimeZoneInfo.Local.IsDaylightSavingTime(timestamp))
+					{
+						// Locale is currently on Daylight time
+						return -10;
+					}
+					else
+					{
+						// Locale is currently on Standard time or unknown
+						return -9;
+					}
+				}
+				catch (Exception)
+				{
+					return -9;
+				}
+			}
+		}
+
 	}
 
 	internal class StationUnits

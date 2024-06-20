@@ -5,11 +5,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Threading;
 
 namespace CreateMissing
 {
-	class Program
+	static class Program
 	{
 		public static Cumulus cumulus;
 		public static string location;
@@ -17,11 +16,11 @@ namespace CreateMissing
 		private static ConsoleColor defConsoleColour;
 
 		private static DayFile dayfile;
-		private static readonly List<string> CurrentLogLines = new List<string>();
+		private static readonly List<string> CurrentLogLines = [];
 		private static string CurrentLogName;
 		private static int CurrentLogLineNum = 0;
 
-		private static readonly List<string> CurrentSolarLogLines = new List<string>();
+		private static readonly List<string> CurrentSolarLogLines = [];
 		private static string CurrentSolarLogName;
 		private static int CurrentSolarLogLineNum = 0;
 
@@ -35,7 +34,7 @@ namespace CreateMissing
 		static void Main()
 		{
 #if DEBUG
-			//Thread.CurrentThread.CurrentCulture = new CultureInfo("nl-NL");
+			//System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("sl-SL")
 #endif
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener($"MXdiags{Path.DirectorySeparatorChar}CreateMissing-{DateTime.Now:yyyyMMdd-HHmmss}.txt", "CMlog");
 			Trace.Listeners.Add(myTextListener);
@@ -85,6 +84,7 @@ namespace CreateMissing
 				Console.WriteLine("Exiting...");
 				Environment.Exit(1);
 			}
+
 			Console.WriteLine();
 
 			// Sanity check #2
@@ -199,7 +199,7 @@ namespace CreateMissing
 				}
 			}
 
-			currDate = IncrementMeteoDate(dayfile.DayfileRecs[dayfile.DayfileRecs.Count - 1].Date);
+			currDate = IncrementMeteoDate(dayfile.DayfileRecs[^1].Date);
 			// We need the last total chill hours to increment if there are missing records at the end of the day file
 			// check if total chill hours needs to be reset
 			if (currDate.Month == cumulus.ChillHourSeasonStart && currDate.Day == 1)
@@ -208,7 +208,7 @@ namespace CreateMissing
 			}
 			else
 			{
-				TotalChillHours = dayfile.DayfileRecs[dayfile.DayfileRecs.Count - 1].ChillHours;
+				TotalChillHours = dayfile.DayfileRecs[^1].ChillHours;
 			}
 
 			// that is the dayfile processed, but what if it had missing records at the end?
@@ -315,6 +315,8 @@ namespace CreateMissing
 				ChillHours = 0
 			};
 
+			var inv = CultureInfo.InvariantCulture;
+
 			var started = false;
 			var finished = false;
 			var recCount = 0;
@@ -389,9 +391,6 @@ namespace CreateMissing
 					if (dayfile.LineEnding == string.Empty)
 					{
 						Utils.TryDetectNewLine(fileName, out dayfile.LineEnding);
-
-						// determine the dayfile field and date separators
-						Utils.GetLogFileSeparators(fileName, CultureInfo.CurrentCulture.TextInfo.ListSeparator, out dayfile.FieldSep, out dayfile.DateSep);
 					}
 
 
@@ -422,9 +421,9 @@ namespace CreateMissing
 								continue;
 							}
 
-							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator));
+							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator))
 							// Regex is very expensive, let's assume the separator is always a single character
-							var st = new List<string>(CurrentLogLines[CurrentLogLineNum++].Split(dayfile.FieldSep[0]));
+							var st = new List<string>(CurrentLogLines[CurrentLogLineNum++].Split(','));
 							var entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
 
 							if (entrydate < startTimeMinus1)
@@ -440,8 +439,8 @@ namespace CreateMissing
 								// after that build the total was reset to zero in the entry
 								// messy!
 								// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
-								var rain = double.Parse(st[9]);    // 9
-								var raincounter = double.Parse(st[11]);  // 11
+								var rain = double.Parse(st[9], inv);    // 9
+								var raincounter = double.Parse(st[11], inv);  // 11
 
 								// we need to initalise the rain counter on the first record
 								if (rain1hLog.Count == 0)
@@ -487,16 +486,16 @@ namespace CreateMissing
 							if (entrydate >= startTime && entrydate <= endTime)
 							{
 								recCount++;
-								var outsidetemp = double.Parse(st[++idx]);	// 2
-								var hum = int.Parse(st[++idx]);				// 3
-								var dewpoint = double.Parse(st[++idx]);		// 4
-								var speed = double.Parse(st[++idx]);		// 5
-								var gust = double.Parse(st[++idx]);			// 6
-								var avgbearing = int.Parse(st[++idx]);		// 7
-								var rainrate = double.Parse(st[++idx]);		// 8
-								var raintoday = double.Parse(st[++idx]);	// 9
-								var pressure = double.Parse(st[++idx]);		// 10
-								var raincounter = double.Parse(st[++idx]);	// 11
+								var outsidetemp = double.Parse(st[++idx], inv);	// 2
+								var hum = int.Parse(st[++idx]);					// 3
+								var dewpoint = double.Parse(st[++idx], inv);	// 4
+								var speed = double.Parse(st[++idx], inv);		// 5
+								var gust = double.Parse(st[++idx], inv);		// 6
+								var avgbearing = int.Parse(st[++idx], inv);		// 7
+								var rainrate = double.Parse(st[++idx], inv);	// 8
+								var raintoday = double.Parse(st[++idx], inv);	// 9
+								var pressure = double.Parse(st[++idx], inv);	// 10
+								var raincounter = double.Parse(st[++idx], inv);	// 11
 
 								if (!started)
 								{
@@ -511,12 +510,12 @@ namespace CreateMissing
 								{
 									// current gust
 									idx = 14;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.HighGust)
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighGust)
 									{
 										rec.HighGust = valDbl;
 										rec.HighGustTime = entrydate;
 										idx = 24;
-										if (st.Count > idx && int.TryParse(st[idx], out valInt))
+										if (st.Count > idx && int.TryParse(st[idx], inv, out valInt))
 										{
 											rec.HighGustBearing = valInt;
 										}
@@ -527,7 +526,7 @@ namespace CreateMissing
 									}
 									// low chill
 									idx = 15;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl < rec.LowWindChill)
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl < rec.LowWindChill)
 									{
 										rec.LowWindChill = valDbl;
 										rec.LowWindChillTime = entrydate;
@@ -544,7 +543,7 @@ namespace CreateMissing
 									}
 									// hi heat
 									idx = 16;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.HighHeatIndex)
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighHeatIndex)
 									{
 										rec.HighHeatIndex = valDbl;
 										rec.HighHeatIndexTime = entrydate;
@@ -561,7 +560,7 @@ namespace CreateMissing
 									}
 									// hi/low appt
 									idx = 21;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl))
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 									{
 										if (valDbl > rec.HighAppTemp)
 										{
@@ -593,7 +592,7 @@ namespace CreateMissing
 
 									// hi/low feels like
 									idx = 27;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl))
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 									{
 										if (valDbl > rec.HighFeelsLike)
 										{
@@ -624,7 +623,7 @@ namespace CreateMissing
 
 									// hi humidex
 									idx = 28;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl))
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 									{
 										if (valDbl > rec.HighHumidex)
 										{
@@ -832,8 +831,8 @@ namespace CreateMissing
 									// after that build the total was reset to zero in the 00:00 entry
 									// messy!
 									// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
-									var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
-									var rolloverRaincounter = double.Parse(st[11]);  // 11 - rain counter
+									//var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
+									var rolloverRaincounter = double.Parse(st[11], inv);  // 11 - rain counter
 
 									rec.TotalRain += (rolloverRaincounter - lastentrycounter) * cumulus.CalibRainMult;
 
@@ -927,8 +926,6 @@ namespace CreateMissing
 
 						return rec;
 					}
-
-					//return null;
 				}
 				if (fileDate > date)
 				{
@@ -1009,9 +1006,6 @@ namespace CreateMissing
 					if (dayfile.LineEnding == string.Empty)
 					{
 						Utils.TryDetectNewLine(fileName, out dayfile.LineEnding);
-
-						// determine the dayfile field and date separators
-						Utils.GetLogFileSeparators(fileName, CultureInfo.CurrentCulture.TextInfo.ListSeparator, out dayfile.FieldSep, out dayfile.DateSep);
 					}
 
 					try
@@ -1049,7 +1043,7 @@ namespace CreateMissing
 							}
 
 							// Regex is very expensive, let's assume the separator is always a single character
-							var ut = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(dayfile.FieldSep[0]));
+							var ut = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(','));
 
 							if (ut.Count < 10)
 							{
@@ -1313,9 +1307,16 @@ namespace CreateMissing
 
 		private static string GetLogFileName(DateTime thedate)
 		{
-			var datestring = thedate.ToString("MMMyy").Replace(".", "");
+			// First determine the date for the log file.
+			// If we're using 9am roll-over, the date should be 9 hours (10 in summer)
+			// before 'Now'
+			var logfiledate = thedate.AddHours(cumulus.GetHourInc(thedate));
+
+
+			var datestring = logfiledate.ToString("yyyyMM");
 
 			return location + "data" + Path.DirectorySeparatorChar + datestring + "log.txt";
+
 		}
 
 		private static void ExtractSolarData(List<string> st, ref Dayfilerec rec, DateTime entrydate)
@@ -1372,7 +1373,7 @@ namespace CreateMissing
 				TimeZoneInfo tz = TimeZoneInfo.Local;
 
 				// Date without time
-				DateTime rawDate = new DateTime(thedate.Year, thedate.Month, thedate.Day);
+				DateTime rawDate = new DateTime(thedate.Year, thedate.Month, thedate.Day, 0, 0, 0, DateTimeKind.Local);
 
 				if (cumulus.Use10amInSummer && tz.IsDaylightSavingTime(thedate))
 				{
@@ -1438,17 +1439,9 @@ namespace CreateMissing
 	}
 
 
-	class LastHourRainLog
+	class LastHourRainLog(DateTime ts, double rain)
 	{
-		public readonly DateTime Timestamp;
-		public readonly double Raincounter;
-
-		public LastHourRainLog(DateTime ts, double rain)
-		{
-			Timestamp = ts;
-			Raincounter = rain;
-		}
+		public readonly DateTime Timestamp = ts;
+		public readonly double Raincounter = rain;
 	}
-
-
 }
