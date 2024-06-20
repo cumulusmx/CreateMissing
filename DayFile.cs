@@ -248,8 +248,11 @@ namespace CreateMissing
 			strb.Append(datestring + sep);
 
 			if (rec.HighGust == -9999)
+			{
+				Program.LogMessage("Mandatory value High Gust missing, skipping this day");
 				return null;
 				//strb.Append("0.0" + listsep + "0" + listsep + "00:00" + listsep)
+			}
 			else
 			{
 				strb.Append(rec.HighGust.ToString(Program.cumulus.WindFormat, inv) + sep);
@@ -258,8 +261,11 @@ namespace CreateMissing
 			}
 
 			if (rec.LowTemp == 9999)
+			{
+				Program.LogMessage("Mandatory value Low Temp missing, skipping this day");
 				return null;
 				//strb.Append("0.0" + listsep + "00:00" + listsep)
+			}
 			else
 			{
 				strb.Append(rec.LowTemp.ToString(Program.cumulus.TempFormat, inv) + sep);
@@ -267,8 +273,11 @@ namespace CreateMissing
 			}
 
 			if (rec.HighTemp == -9999)
+			{
+				Program.LogMessage("Mandatory value High Temp missing, skipping this day");
 				return null;
 				//strb.Append("0.0" + listsep + "00:00" + listsep)
+			}
 			else
 			{
 				strb.Append(rec.HighTemp.ToString(Program.cumulus.TempFormat, inv) + sep);
@@ -276,8 +285,11 @@ namespace CreateMissing
 			}
 
 			if (rec.LowPress == 9999)
+			{
+				Program.LogMessage("Mandatory value Low Press missing, skipping this day");
 				return null;
 				//strb.Append("0.0" + listsep + "00:00" + listsep)
+			}
 			else
 			{
 				strb.Append(rec.LowPress.ToString(Program.cumulus.PressFormat, inv) + sep);
@@ -285,8 +297,11 @@ namespace CreateMissing
 			}
 
 			if (rec.HighPress == -9999)
+			{
+				Program.LogMessage("Mandatory value High Press missing, skipping this day");
 				return null;
 				//strb.Append("0.0" + listsep + "00:00" + listsep)
+			}
 			else
 			{
 				strb.Append(rec.HighPress.ToString(Program.cumulus.PressFormat, inv) + sep);
@@ -294,8 +309,11 @@ namespace CreateMissing
 			}
 
 			if (rec.HighRainRate == -9999)
+			{
+				Program.LogMessage("Mandatory value High Rain Rate missing, skipping this day");
 				return null;
 				//strb.Append("0.0" + listsep + "00:00" + listsep)
+			}
 			else
 			{
 				strb.Append(rec.HighRainRate.ToString(Program.cumulus.RainFormat, inv) + sep);
@@ -303,13 +321,19 @@ namespace CreateMissing
 			}
 
 			if (rec.TotalRain == -9999)
+			{
+				Program.LogMessage("Mandatory value Total Rain missing, skipping this day");
 				return null;
 				//strb.Append("0.0" + listsep)
+			}
 			else
 				strb.Append(rec.TotalRain.ToString(Program.cumulus.RainFormat, inv) + sep);
 
 			if (rec.AvgTemp == -9999)
+			{
+				Program.LogMessage("Mandatory value Avg Temp missing, skipping this day");
 				strb.Append(sep);
+			}
 			else
 				strb.Append(rec.AvgTemp.ToString(Program.cumulus.TempFormat, inv) + sep);
 

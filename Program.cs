@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -33,7 +34,7 @@ namespace CreateMissing
 		static void Main()
 		{
 #if DEBUG
-			//Thread.CurrentThread.CurrentCulture = new CultureInfo("nl-NL")
+			//System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("sl-SL")
 #endif
 			TextWriterTraceListener myTextListener = new TextWriterTraceListener($"MXdiags{Path.DirectorySeparatorChar}CreateMissing-{DateTime.Now:yyyyMMdd-HHmmss}.txt", "CMlog");
 			Trace.Listeners.Add(myTextListener);
@@ -83,6 +84,7 @@ namespace CreateMissing
 				Console.WriteLine("Exiting...");
 				Environment.Exit(1);
 			}
+
 			Console.WriteLine();
 
 			// Sanity check #2
@@ -313,6 +315,8 @@ namespace CreateMissing
 				ChillHours = 0
 			};
 
+			var inv = CultureInfo.InvariantCulture;
+
 			var started = false;
 			var finished = false;
 			var recCount = 0;
@@ -435,8 +439,8 @@ namespace CreateMissing
 								// after that build the total was reset to zero in the entry
 								// messy!
 								// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
-								var rain = double.Parse(st[9]);    // 9
-								var raincounter = double.Parse(st[11]);  // 11
+								var rain = double.Parse(st[9], inv);    // 9
+								var raincounter = double.Parse(st[11], inv);  // 11
 
 								// we need to initalise the rain counter on the first record
 								if (rain1hLog.Count == 0)
@@ -482,16 +486,16 @@ namespace CreateMissing
 							if (entrydate >= startTime && entrydate <= endTime)
 							{
 								recCount++;
-								var outsidetemp = double.Parse(st[++idx]);	// 2
-								var hum = int.Parse(st[++idx]);				// 3
-								var dewpoint = double.Parse(st[++idx]);		// 4
-								var speed = double.Parse(st[++idx]);		// 5
-								var gust = double.Parse(st[++idx]);			// 6
-								var avgbearing = int.Parse(st[++idx]);		// 7
-								var rainrate = double.Parse(st[++idx]);		// 8
-								var raintoday = double.Parse(st[++idx]);	// 9
-								var pressure = double.Parse(st[++idx]);		// 10
-								var raincounter = double.Parse(st[++idx]);	// 11
+								var outsidetemp = double.Parse(st[++idx], inv);	// 2
+								var hum = int.Parse(st[++idx]);					// 3
+								var dewpoint = double.Parse(st[++idx], inv);	// 4
+								var speed = double.Parse(st[++idx], inv);		// 5
+								var gust = double.Parse(st[++idx], inv);		// 6
+								var avgbearing = int.Parse(st[++idx], inv);		// 7
+								var rainrate = double.Parse(st[++idx], inv);	// 8
+								var raintoday = double.Parse(st[++idx], inv);	// 9
+								var pressure = double.Parse(st[++idx], inv);	// 10
+								var raincounter = double.Parse(st[++idx], inv);	// 11
 
 								if (!started)
 								{
@@ -506,12 +510,12 @@ namespace CreateMissing
 								{
 									// current gust
 									idx = 14;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.HighGust)
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighGust)
 									{
 										rec.HighGust = valDbl;
 										rec.HighGustTime = entrydate;
 										idx = 24;
-										if (st.Count > idx && int.TryParse(st[idx], out valInt))
+										if (st.Count > idx && int.TryParse(st[idx], inv, out valInt))
 										{
 											rec.HighGustBearing = valInt;
 										}
@@ -522,7 +526,7 @@ namespace CreateMissing
 									}
 									// low chill
 									idx = 15;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl < rec.LowWindChill)
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl < rec.LowWindChill)
 									{
 										rec.LowWindChill = valDbl;
 										rec.LowWindChillTime = entrydate;
@@ -539,7 +543,7 @@ namespace CreateMissing
 									}
 									// hi heat
 									idx = 16;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.HighHeatIndex)
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighHeatIndex)
 									{
 										rec.HighHeatIndex = valDbl;
 										rec.HighHeatIndexTime = entrydate;
@@ -556,7 +560,7 @@ namespace CreateMissing
 									}
 									// hi/low appt
 									idx = 21;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl))
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 									{
 										if (valDbl > rec.HighAppTemp)
 										{
@@ -588,7 +592,7 @@ namespace CreateMissing
 
 									// hi/low feels like
 									idx = 27;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl))
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 									{
 										if (valDbl > rec.HighFeelsLike)
 										{
@@ -619,7 +623,7 @@ namespace CreateMissing
 
 									// hi humidex
 									idx = 28;
-									if (st.Count > idx && double.TryParse(st[idx], out valDbl))
+									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 									{
 										if (valDbl > rec.HighHumidex)
 										{
@@ -828,7 +832,7 @@ namespace CreateMissing
 									// messy!
 									// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
 									//var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
-									var rolloverRaincounter = double.Parse(st[11]);  // 11 - rain counter
+									var rolloverRaincounter = double.Parse(st[11], inv);  // 11 - rain counter
 
 									rec.TotalRain += (rolloverRaincounter - lastentrycounter) * cumulus.CalibRainMult;
 
