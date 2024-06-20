@@ -1,3 +1,7 @@
+2.0.1
+—————
+- Fix locale issues reading the log files
+
 2.0.0
 —————
 - Initial release for .net 8.0
