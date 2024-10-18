@@ -1,19 +1,45 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyVersion>$(PackageVersion)</AssemblyVersion>
     <FileVersion>$(PackageVersion)</FileVersion>
-    <Version>2.0.1.0003</Version>
+    <Version>2.0.2.0004</Version>
     <StartupObject>CreateMissing.Program</StartupObject>
     <TargetFramework>net8.0</TargetFramework>
     <Authors>Mark Crossley</Authors>
     <Company>Cumulus MX</Company>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x86</PlatformTarget>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <Configurations>Debug;Release;Release x86</Configurations>
+    <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
+
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+    <PlatformTarget>x86</PlatformTarget>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+      <PlatformTarget>x86</PlatformTarget>
+      <DebugType>none</DebugType>
+      <DebugSymbols>false</DebugSymbols>
+      <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="if $(ConfigurationName)==Release (&#xD;&#xA;echo.&#xD;&#xA;echo Update Distribution folder&#xD;&#xA;echo copy .exe&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;xcopy &quot;$(OutputPath)\CreateMissing.exe&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;&#xD;&#xA;echo copy .config&#xD;&#xA;xcopy &quot;$(OutputPath)\CreateMissing.runtimeconfig.json&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;)" />
+    <Exec Command="if $(ConfigurationName)==Release (&#xD;&#xA;echo.&#xD;&#xA;echo Update Distribution folder&#xD;&#xA;if $(Platform)==x86 (&#xD;&#xA;  echo copy exe - x86&#xD;&#xA;  xcopy &quot;$(OutputPath)\CreateMissing.exe&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX\CreateMissing32.exe&quot; /D /-I /Y&#xD;&#xA;)&#xD;&#xA;if $(Platform)==AnyCPU (&#xD;&#xA;  echo copy exe - AnyCPU&#xD;&#xA;  xcopy &quot;$(TargetPath)&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;  xcopy &quot;$(OutputPath)\CreateMissing.exe&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;&#xD;&#xA;  echo copy .config&#xD;&#xA;  xcopy &quot;$(OutputPath)\CreateMissing.runtimeconfig.json&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;&#xD;&#xA;  echo copy .deps&#xD;&#xA;  xcopy &quot;$(OutputPath)\CreateMissing.deps.json&quot; &quot;$(SolutionDir)..\CumulusMX-Dist.Net\CumulusMX&quot; /D /-I /Q /Y&#xD;&#xA;)&#xD;&#xA;)" />
   </Target>
+  <ItemGroup>
+    <Content Include="icon.ico" />
+  </ItemGroup>
 </Project>

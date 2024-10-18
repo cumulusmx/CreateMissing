@@ -1321,6 +1321,8 @@ namespace CreateMissing
 
 		private static void ExtractSolarData(List<string> st, ref Dayfilerec rec, DateTime entrydate)
 		{
+			var inv = CultureInfo.InvariantCulture;
+
 			double valDbl;
 			int valInt;
 			int idx = 0;
@@ -1328,27 +1330,27 @@ namespace CreateMissing
 			{
 				// hours of sunshine
 				idx = 23;
-				if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.SunShineHours)
+				if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.SunShineHours)
 				{
 					rec.SunShineHours = valDbl;
 				}
 				// hi UV-I
 				idx = 17;
-				if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.HighUv)
+				if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighUv)
 				{
 					rec.HighUv = valDbl;
 					rec.HighUvTime = entrydate;
 				}
 				// hi solar
 				idx = 18;
-				if (st.Count > idx && int.TryParse(st[idx], out valInt) && valInt > rec.HighSolar)
+				if (st.Count > idx && int.TryParse(st[idx], inv, out valInt) && valInt > rec.HighSolar)
 				{
 					rec.HighSolar = valInt;
 					rec.HighSolarTime = entrydate;
 				}
 				// ET
 				idx = 19;
-				if (st.Count > idx && double.TryParse(st[idx], out valDbl) && valDbl > rec.ET)
+				if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.ET)
 				{
 					rec.ET = valDbl;
 				}
