@@ -2,7 +2,7 @@
 A utility to create and update missing entries in the Cumulus MX dayfile.txt file from the monthly log files
 
 ## About this program
-The CreateMissing utility is a command program written in .Net Framework, so it will run on Windows or Linux. Under Linux you will have to use the mono runtime environment to execute the program.
+The CreateMissing utility is a command line program written in .NET, so it will run on Windows or Linux. Under Linux you will have to use the dotnet runtime environment to execute the program.
 
 The utility will read your monthly log files and your dayfile.txt (if it exists). It will then compare the data:
 * If a day is missing from your dayfile, but present in your monthly logs, it will create a new dayfile record for you.
@@ -14,7 +14,7 @@ What it will not do is update existing data within a day record. This is deliber
 The dayfile records created by CreateMissing are only as good as the source data in the monthly log files. The logging interval used will affect the accuracy of the values generated, if the logs have 1 minute intervals, then generally you will get a more accurate result than if they they have 30 minute intervals. This may affect the times of highs and lows even more than the data values.
 
 ## Installing
-Just copy the two files (CreateMissing.exe, CreateMissing.exe.config) in the release zip file to your Cumulus MX root folder.
+Just copy all the files in the release zip file to your Cumulus MX root folder.
 
 ## Before you run CreateMissing
 CreateMissing has to be told the first date when you expect data to be available. To do this it reads the "Records Began Date" from your Cumulus.ini file.
@@ -45,7 +45,7 @@ From Windows, start a command prompt and change the path to your Cumulus MX root
 
 From Linux, change your command line path to your Cumulus MX root folder, then enter the command:
 
-` > mono CreateMissing.exe`
+` > dotnet CreateMissing.dll`
 
 ## Output
 If the utility runs successfully (it may well highlight some issues with your monthly files that need fixing), then it will create a new data\dayfile.txt output file.
@@ -57,6 +57,6 @@ If the saved file is already present, CreateMissing will not overwrite it, it wi
 In addition to the information output to the console, each run of CreateMissing will create a new log file in your MXdiags folder. You may need to refer to that file when fixing up issues with your monthly log files.
 
 ## Cumulus MX
-Please note that though you can run CreateMissing without stopping Cumulus MX [1], you must stop/start Cumulus MX if you want it to pickup any new data in your dayfile.txt
+Please note that though you can run CreateMissing without stopping Cumulus MX<sup>[1]</sup>, you must stop/start Cumulus MX if you want it to pickup any new data in your dayfile.txt
 
 [1] It is not safe to run CreateMissing if Cumulus MX is writing to the dayfile. For example it is performing "catch-up" processing at start-up, or end of day processing at the end/start of your meteorological day.
