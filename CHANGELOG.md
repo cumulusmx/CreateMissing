@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -7,11 +7,19 @@ Alternatively view it [online on GitHub](https://github.com/cumulusmx/CreateMiss
 
 ---
 
-## 2.0.2 - 2024-10-18
+## [2.0.3][3] - 2025-06-27
+- Fix daily rainfall calculation on raincounter reset at rollover
+
+## [2.0.2][2] - 2024-10-18
 - Fix locale issues reading solar data from the log files
 
-## 2.0.1 - 2024-06-20
+## [2.0.1][1] - 2024-06-20
 - Fix locale issues reading the log files
 
 ## 2.0.0
 - Initial release for .net 8.0
+
+
+[1]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.0.1
+[2]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.0.2
+[3]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.0.3

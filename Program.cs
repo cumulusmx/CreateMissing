@@ -327,7 +327,7 @@ namespace CreateMissing
 
 			var startTime = date;
 			var endTime = IncrementMeteoDate(date);
-			var startTimeMinus1 = startTime.AddDays(-1);
+			var startTimeMinus1 = DecrementMeteoDate(date);
 
 			// get the monthly log file name
 			var fileName = GetLogFileName(startTimeMinus1);
@@ -431,7 +431,7 @@ namespace CreateMissing
 
 							// are we within 24 hours of the start time?
 							// if so initialise the 24 hour rain process
-							if (entrydate >= startTimeMinus1 && entrydate <= startTime)
+							if (entrydate >= startTimeMinus1 && entrydate >= startTime)
 							{
 
 								// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
@@ -834,7 +834,10 @@ namespace CreateMissing
 									//var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
 									var rolloverRaincounter = double.Parse(st[11], inv);  // 11 - rain counter
 
-									rec.TotalRain += (rolloverRaincounter - lastentrycounter) * cumulus.CalibRainMult;
+									if (rolloverRaincounter > lastentrycounter)
+									{
+										rec.TotalRain += (rolloverRaincounter - lastentrycounter) * cumulus.CalibRainMult;
+									}
 
 
 									//if (rolloverRain > 0)
@@ -1395,6 +1398,11 @@ namespace CreateMissing
 		private static DateTime IncrementMeteoDate(DateTime thedate)
 		{
 			return SetStartTime(thedate.AddDays(1));
+		}
+
+		private static DateTime DecrementMeteoDate(DateTime thedate)
+		{
+			return SetStartTime(thedate.AddDays(-1));
 		}
 
 		private static bool GetUserConfirmation(string msg)
