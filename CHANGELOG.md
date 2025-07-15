@@ -7,6 +7,9 @@ Alternatively view it [online on GitHub](https://github.com/cumulusmx/CreateMiss
 
 ---
 
+## [2.1.0][4] - 2025-07-20
+- Add the ability to calculate daily ET
+
 ## [2.0.3][3] - 2025-06-27
 - Fix daily rainfall calculation on raincounter reset at rollover
 
@@ -23,3 +26,4 @@ Alternatively view it [online on GitHub](https://github.com/cumulusmx/CreateMiss
 [1]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.0.1
 [2]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.0.2
 [3]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.0.3
+[4]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.1.0

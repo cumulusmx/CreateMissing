@@ -2,12 +2,16 @@
 using System;
 using System.Globalization;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace CreateMissing
 {
 	static class Utils
 	{
+		private const double inHg2kPa = 3.38638866667;
+		private const int kPa2hPa = 10;
+		private const double mm2in = 1 / 25.4;
+
+
 		public static DateTime DdmmyyStrToDate(string d)
 		{
 			if (DateTime.TryParseExact(d, "dd/MM/yy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var result))
@@ -31,6 +35,17 @@ namespace CreateMissing
 			var tim = time.Split(':');
 			return new DateTime(date.Year, date.Month, date.Day, int.Parse(tim[0]), int.Parse(tim[1]), 0, DateTimeKind.Local);
 		}
+
+		/// <summary>
+		/// Converts rain in mm to units in use
+		/// </summary>
+		/// <param name="value">Rain in mm</param>
+		/// <returns>Rain in configured units</returns>
+		public static double RainMMToUser(double value)
+		{
+			return Program.cumulus.Units.Rain == 0 ? value : value * mm2in;
+		}
+
 
 		public static double UserTempToC(double value)
 		{
@@ -97,6 +112,23 @@ namespace CreateMissing
 				_ => 0,
 			};
 		}
+
+		/// <summary>
+		/// Convert pressure from user units to kPa
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static double UserPressToKpa(double value)
+		{
+			return Program.cumulus.Units.Press switch
+			{
+				0 or 1 => value / kPa2hPa,
+				2 => value * inHg2kPa,
+				3 => value,
+				_ => 0
+			};
+		}
+
 
 		public static int CalcAvgBearing(double x, double y)
 		{

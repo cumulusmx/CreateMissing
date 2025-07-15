@@ -31,6 +31,8 @@ namespace CreateMissing
 
 		private static double TotalChillHours;
 
+		private static WeatherDataDict CurrentWeatherData = new WeatherDataDict();
+
 		static void Main()
 		{
 #if DEBUG
@@ -323,6 +325,7 @@ namespace CreateMissing
 			var idx = 0;
 
 			var lastentrydate = DateTime.MinValue;
+			int lastentryHour = -1;
 			var lasttempvalue = 0.0;
 
 			var startTime = date;
@@ -348,6 +351,9 @@ namespace CreateMissing
 			var lastentrycounter = 0.0;
 			double rainThisHour;
 			double rainLast24Hr;
+
+			// clear the current weather data for this date
+			CurrentWeatherData.Clear();
 
 			rec.Date = date;
 
@@ -502,6 +508,7 @@ namespace CreateMissing
 									lasttempvalue = outsidetemp;
 									lastentrydate = entrydate;
 									totalRainfall = lastentryrain;
+									lastentryHour = entrydate.Hour;
 									started = true;
 								}
 
@@ -778,6 +785,51 @@ namespace CreateMissing
 									}
 									rec.ChillHours = TotalChillHours;
 
+									// data for ET
+									if (st.Count >= 21)
+									{
+										idx = 18;
+										int? solarRad = int.TryParse(st[idx], out var i) ? i : null;
+										idx = 22;
+										int? solarMax = int.TryParse(st[idx], out i) ? i : null;
+
+										if (!CurrentWeatherData.TryAdd(entrydate, new WeatherData()
+										{
+											Temp = outsidetemp,
+											Humidity = hum,
+											WindSpeed = speed,
+											Pressure = pressure,
+											SolarRad = solarRad,
+											SolarMax = solarMax
+										}))
+										{
+											// normally this is a DST coming off error when 1 hours data is entered twice
+											LogMessage($"Error adding ET weather data for {entrydate}, duplicate entry");
+										}
+									}
+
+									if (lastentryHour < entrydate.Hour)
+									{
+										lastentryHour = entrydate.Hour;
+
+										// get the averages for ET
+										var etData = CurrentWeatherData.GetAverages(lastentrydate);
+										if (etData != null)
+										{
+											rec.ET += Utils.RainMMToUser(
+												MeteoLib.Evapotranspiration(
+													Utils.UserTempToC(etData.Temp.Value),
+													etData.Humidity.Value,
+													etData.SolarRad.Value,
+													etData.SolarMax.Value,
+													Utils.UserWindToMS(etData.WindSpeed.Value),
+													Utils.UserPressToKpa(etData.Pressure.Value)
+													)
+												);
+										}
+									}
+
+
 									lastentryrain = raintoday;
 									lastentrycounter = raincounter;
 									lasttempvalue = outsidetemp;
@@ -870,6 +922,22 @@ namespace CreateMissing
 									// total rain
 									totalRainfall += rec.TotalRain;
 									lastentrycounter = raincounter;
+
+									// get the averages for ET
+									var etData = CurrentWeatherData.GetAverages(lastentrydate);
+									if (etData != null)
+									{
+										rec.ET += Utils.RainMMToUser(
+											MeteoLib.Evapotranspiration(
+												Utils.UserTempToC(etData.Temp.Value),
+												etData.Humidity.Value,
+												etData.SolarRad.Value,
+												etData.SolarMax.Value,
+												Utils.UserWindToMS(etData.WindSpeed.Value),
+												Utils.UserPressToKpa(etData.Pressure.Value)
+												)
+											);
+									}
 
 									// flag we are done with this record
 									finished = true;

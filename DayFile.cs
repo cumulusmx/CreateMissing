@@ -737,7 +737,7 @@ namespace CreateMissing
 				DominantWindBearing == 9999 || LowDewPoint == 9999 || HighDewPoint == -9999 || LowWindChill == 9999 || HighHourlyRain == -9999 ||
 				LowAppTemp == 9999 || HighAppTemp == -9999 || HighHeatIndex == -9999 || HighHumidity == -9999 || LowHumidity == 9999 ||
 				HighAvgWind == -9999 || AvgTemp == -9999 || HighRainRate == -9999 || LowPress == 9999 || HighPress == -9999 ||
-				HighTemp == -9999 || LowTemp == 9999 || HighGust == -9999 || ChillHours == -9999 || HighRain24h == -9999)
+				HighTemp == -9999 || LowTemp == 9999 || HighGust == -9999 || ChillHours == -9999 || HighRain24h == -9999 || ET == -9999)
 			{
 				return true;
 			}
