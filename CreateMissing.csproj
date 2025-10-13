@@ -3,15 +3,16 @@
     <OutputType>Exe</OutputType>
     <AssemblyVersion>$(PackageVersion)</AssemblyVersion>
     <FileVersion>$(PackageVersion)</FileVersion>
-    <Version>2.1.0.0006</Version>
+    <Version>3.0.0.0007</Version>
     <StartupObject>CreateMissing.Program</StartupObject>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Authors>Mark Crossley</Authors>
     <Company>Cumulus MX</Company>
     <PlatformTarget>x86</PlatformTarget>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <Configurations>Debug;Release;Release x86</Configurations>
     <Platforms>AnyCPU;x86</Platforms>
+    <Copyright>Copyright ©  2015-$([System.DateTime]::Now.ToString('yyyy') Cumulus MX</Copyright>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

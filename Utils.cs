@@ -21,15 +21,6 @@ namespace CreateMissing
 			return DateTime.MinValue;
 		}
 
-		public static DateTime DdmmyyhhmmStrToDate(string d, string t)
-		{
-			if (DateTime.TryParseExact(d + ' ' + t, "dd/MM/yy HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var result))
-			{
-				return result;
-			}
-			return DateTime.MinValue;
-		}
-
 		public static DateTime GetDateTime(DateTime date, string time)
 		{
 			var tim = time.Split(':');

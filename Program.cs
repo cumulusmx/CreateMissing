@@ -358,8 +358,8 @@ namespace CreateMissing
 			rec.Date = date;
 
 			// n-minute logfile. Fields are comma-separated:
-			// 0  Date in the form dd/mm/yy (the slash may be replaced by other characters)
-			// 1  Current time - hh:mm
+			// 0  Datetime in the form dd/mm/yy hh:mm
+			// 1  Timestamp
 			// 2  Current temperature
 			// 3  Current humidity
 			// 4  Current dewpoint
@@ -427,390 +427,503 @@ namespace CreateMissing
 								continue;
 							}
 
-							//var st = new List<string>(Regex.Split(line, CultureInfo.CurrentCulture.TextInfo.ListSeparator))
-							// Regex is very expensive, let's assume the separator is always a single character
 							var st = new List<string>(CurrentLogLines[CurrentLogLineNum++].Split(','));
-							var entrydate = Utils.DdmmyyhhmmStrToDate(st[0], st[1]);
 
-							if (entrydate < startTimeMinus1)
-								continue;
-
-							// are we within 24 hours of the start time?
-							// if so initialise the 24 hour rain process
-							if (entrydate >= startTimeMinus1 && entrydate >= startTime)
+							if (long.TryParse(st[1], out var ts))
 							{
+								var entrydate = ts.FromUnixTime();
 
-								// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
-								// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
-								// after that build the total was reset to zero in the entry
-								// messy!
-								// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
-								var rain = double.Parse(st[9], inv);    // 9
-								var raincounter = double.Parse(st[11], inv);  // 11
-
-								// we need to initalise the rain counter on the first record
-								if (rain1hLog.Count == 0)
-								{
-									lastentrycounter = raincounter;
-								}
-
-
-								if (entrydate == startTime)
-								{
-
-									if (rain == 0 && (raincounter - lastentrycounter > 0) && (raincounter - lastentrycounter < counterJumpTooBig))
-									{
-										rain = lastentryrain + (raincounter - lastentrycounter) * cumulus.CalibRainMult;
-									}
-									else if (rain == 0)
-									{
-										rain = lastentryrain;
-									}
-								}
-								else if (entrydate == startTimeMinus1)
-								{
-									rain = 0;
-								}
-
-								AddLastHoursRainEntry(entrydate, raincounter, ref rain1hLog, ref rain24hLog);
-
-								lastentryrain = rain;
-
-								if (entrydate < startTime)
-								{
-									lastentrycounter = raincounter;
-									lastentrydate = entrydate;
-
+								if (entrydate < startTimeMinus1)
 									continue;
-								}
-							}
 
-							// same meto day, or first record of the next day
-							// we want data from 00:00/09:00 to 00:00/09:00
-							// but next day 00:00/09:00 values are only used for summation functions and rainfall in x hours
-
-							if (entrydate >= startTime && entrydate <= endTime)
-							{
-								recCount++;
-								var outsidetemp = double.Parse(st[++idx], inv);	// 2
-								var hum = int.Parse(st[++idx]);					// 3
-								var dewpoint = double.Parse(st[++idx], inv);	// 4
-								var speed = double.Parse(st[++idx], inv);		// 5
-								var gust = double.Parse(st[++idx], inv);		// 6
-								var avgbearing = int.Parse(st[++idx], inv);		// 7
-								var rainrate = double.Parse(st[++idx], inv);	// 8
-								var raintoday = double.Parse(st[++idx], inv);	// 9
-								var pressure = double.Parse(st[++idx], inv);	// 10
-								var raincounter = double.Parse(st[++idx], inv);	// 11
-
-								if (!started)
+								// are we within 24 hours of the start time?
+								// if so initialise the 24 hour rain process
+								if (entrydate >= startTimeMinus1 && entrydate >= startTime)
 								{
-									lasttempvalue = outsidetemp;
-									lastentrydate = entrydate;
-									totalRainfall = lastentryrain;
-									lastentryHour = entrydate.Hour;
-									started = true;
-								}
 
-								// Special case, the last record of the day is only used for averaging and summation purposes
-								if (entrydate != endTime)
-								{
-									// current gust
-									idx = 14;
-									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighGust)
+									// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
+									// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
+									// after that build the total was reset to zero in the entry
+									// messy!
+									// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
+									// CMX v 4.7.0 re-introduced 00:00 log entry containing the rain total
+									var rain = double.Parse(st[9], inv);    // 9
+									var raincounter = double.Parse(st[11], inv);  // 11
+
+									// we need to initalise the rain counter on the first record
+									if (rain1hLog.Count == 0)
 									{
-										rec.HighGust = valDbl;
-										rec.HighGustTime = entrydate;
-										idx = 24;
-										if (st.Count > idx && int.TryParse(st[idx], inv, out valInt))
+										lastentrycounter = raincounter;
+									}
+
+
+									if (entrydate == startTime)
+									{
+
+										if (rain == 0 && (raincounter - lastentrycounter > 0) && (raincounter - lastentrycounter < counterJumpTooBig))
 										{
-											rec.HighGustBearing = valInt;
+											rain = lastentryrain + (raincounter - lastentrycounter) * cumulus.CalibRainMult;
 										}
-										else
+										else if (rain == 0)
 										{
-											rec.HighGustBearing = avgbearing;
+											rain = lastentryrain;
 										}
 									}
-									// low chill
-									idx = 15;
-									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl < rec.LowWindChill)
+									else if (entrydate == startTimeMinus1)
 									{
-										rec.LowWindChill = valDbl;
-										rec.LowWindChillTime = entrydate;
+										rain = 0;
 									}
-									// not logged, calculate it
-									else
+
+									AddLastHoursRainEntry(entrydate, raincounter, ref rain1hLog, ref rain24hLog);
+
+									lastentryrain = rain;
+
+									if (entrydate < startTime)
 									{
-										var wchill = Utils.TempCToUser(MeteoLib.WindChill(Utils.UserTempToC(outsidetemp), Utils.UserWindToKPH(speed)));
-										if (wchill < rec.LowWindChill)
+										lastentrycounter = raincounter;
+										lastentrydate = entrydate;
+
+										continue;
+									}
+								}
+
+								// same meto day, or first record of the next day
+								// we want data from 00:00/09:00 to 00:00/09:00
+								// but next day 00:00/09:00 values are only used for summation functions and rainfall in x hours
+
+								if (entrydate >= startTime && entrydate <= endTime)
+								{
+									recCount++;
+									var outsidetemp = double.Parse(st[++idx], inv); // 2
+									var hum = int.Parse(st[++idx]);                 // 3
+									var dewpoint = double.Parse(st[++idx], inv);    // 4
+									var speed = double.Parse(st[++idx], inv);       // 5
+									var gust = double.Parse(st[++idx], inv);        // 6
+									var avgbearing = int.Parse(st[++idx], inv);     // 7
+									var rainrate = double.Parse(st[++idx], inv);    // 8
+									var raintoday = double.Parse(st[++idx], inv);   // 9
+									var pressure = double.Parse(st[++idx], inv);    // 10
+									var raincounter = double.Parse(st[++idx], inv); // 11
+
+									if (!started)
+									{
+										lasttempvalue = outsidetemp;
+										lastentrydate = entrydate;
+										totalRainfall = lastentryrain;
+										lastentryHour = entrydate.Hour;
+										started = true;
+									}
+
+									// Special case, the last record of the day is only used for averaging and summation purposes
+									if (entrydate != endTime)
+									{
+										// current gust
+										idx = 14;
+										if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighGust)
 										{
-											rec.LowWindChill = wchill;
+											rec.HighGust = valDbl;
+											rec.HighGustTime = entrydate;
+											idx = 24;
+											if (st.Count > idx && int.TryParse(st[idx], inv, out valInt))
+											{
+												rec.HighGustBearing = valInt;
+											}
+											else
+											{
+												rec.HighGustBearing = avgbearing;
+											}
+										}
+										// low chill
+										idx = 15;
+										if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl < rec.LowWindChill)
+										{
+											rec.LowWindChill = valDbl;
 											rec.LowWindChillTime = entrydate;
 										}
-									}
-									// hi heat
-									idx = 16;
-									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighHeatIndex)
-									{
-										rec.HighHeatIndex = valDbl;
-										rec.HighHeatIndexTime = entrydate;
-									}
-									// not logged, calculate it
-									else
-									{
-										var heatIndex = Utils.TempCToUser(MeteoLib.HeatIndex(Utils.UserTempToC(outsidetemp), hum));
-										if (heatIndex > rec.HighHeatIndex)
+										// not logged, calculate it
+										else
 										{
-											rec.HighHeatIndex = heatIndex;
+											var wchill = Utils.TempCToUser(MeteoLib.WindChill(Utils.UserTempToC(outsidetemp), Utils.UserWindToKPH(speed)));
+											if (wchill < rec.LowWindChill)
+											{
+												rec.LowWindChill = wchill;
+												rec.LowWindChillTime = entrydate;
+											}
+										}
+										// hi heat
+										idx = 16;
+										if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl) && valDbl > rec.HighHeatIndex)
+										{
+											rec.HighHeatIndex = valDbl;
 											rec.HighHeatIndexTime = entrydate;
 										}
-									}
-									// hi/low appt
-									idx = 21;
-									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
-									{
-										if (valDbl > rec.HighAppTemp)
+										// not logged, calculate it
+										else
 										{
-											rec.HighAppTemp = valDbl;
-											rec.HighAppTempTime = entrydate;
+											var heatIndex = Utils.TempCToUser(MeteoLib.HeatIndex(Utils.UserTempToC(outsidetemp), hum));
+											if (heatIndex > rec.HighHeatIndex)
+											{
+												rec.HighHeatIndex = heatIndex;
+												rec.HighHeatIndexTime = entrydate;
+											}
 										}
-										if (valDbl < rec.LowAppTemp)
+										// hi/low appt
+										idx = 21;
+										if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 										{
-											rec.LowAppTemp = valDbl;
-											rec.LowAppTempTime = entrydate;
+											if (valDbl > rec.HighAppTemp)
+											{
+												rec.HighAppTemp = valDbl;
+												rec.HighAppTempTime = entrydate;
+											}
+											if (valDbl < rec.LowAppTemp)
+											{
+												rec.LowAppTemp = valDbl;
+												rec.LowAppTempTime = entrydate;
+											}
 										}
-									}
-									// no logged apparent, calculate it
-									else
-									{
-										var apparent = Utils.TempCToUser(MeteoLib.ApparentTemperature(Utils.UserTempToC(outsidetemp), Utils.UserWindToMS(speed), hum));
-										if (apparent > rec.HighAppTemp)
+										// no logged apparent, calculate it
+										else
 										{
-											rec.HighAppTemp = apparent;
-											rec.HighAppTempTime = entrydate;
+											var apparent = Utils.TempCToUser(MeteoLib.ApparentTemperature(Utils.UserTempToC(outsidetemp), Utils.UserWindToMS(speed), hum));
+											if (apparent > rec.HighAppTemp)
+											{
+												rec.HighAppTemp = apparent;
+												rec.HighAppTempTime = entrydate;
+											}
+											if (apparent < rec.LowAppTemp)
+											{
+												rec.LowAppTemp = apparent;
+												rec.LowAppTempTime = entrydate;
+											}
 										}
-										if (apparent < rec.LowAppTemp)
-										{
-											rec.LowAppTemp = apparent;
-											rec.LowAppTempTime = entrydate;
-										}
-									}
 
 
-									// hi/low feels like
-									idx = 27;
-									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
-									{
-										if (valDbl > rec.HighFeelsLike)
+										// hi/low feels like
+										idx = 27;
+										if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 										{
-											rec.HighFeelsLike = valDbl;
-											rec.HighFeelsLikeTime = entrydate;
+											if (valDbl > rec.HighFeelsLike)
+											{
+												rec.HighFeelsLike = valDbl;
+												rec.HighFeelsLikeTime = entrydate;
+											}
+											if (valDbl < rec.LowFeelsLike)
+											{
+												rec.LowFeelsLike = valDbl;
+												rec.LowFeelsLikeTime = entrydate;
+											}
 										}
-										if (valDbl < rec.LowFeelsLike)
+										// no logged feels like data available, calculate it
+										else
 										{
-											rec.LowFeelsLike = valDbl;
-											rec.LowFeelsLikeTime = entrydate;
+											var feels = Utils.TempCToUser(MeteoLib.FeelsLike(Utils.UserTempToC(outsidetemp), Utils.UserWindToKPH(speed), hum));
+											if (feels > rec.HighFeelsLike)
+											{
+												rec.HighFeelsLike = feels;
+												rec.HighFeelsLikeTime = entrydate;
+											}
+											if (feels < rec.LowFeelsLike)
+											{
+												rec.LowFeelsLike = feels;
+												rec.LowFeelsLikeTime = entrydate;
+											}
 										}
-									}
-									// no logged feels like data available, calculate it
-									else
-									{
-										var feels = Utils.TempCToUser(MeteoLib.FeelsLike(Utils.UserTempToC(outsidetemp), Utils.UserWindToKPH(speed), hum));
-										if (feels > rec.HighFeelsLike)
-										{
-											rec.HighFeelsLike = feels;
-											rec.HighFeelsLikeTime = entrydate;
-										}
-										if (feels < rec.LowFeelsLike)
-										{
-											rec.LowFeelsLike = feels;
-											rec.LowFeelsLikeTime = entrydate;
-										}
-									}
 
-									// hi humidex
-									idx = 28;
-									if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
-									{
-										if (valDbl > rec.HighHumidex)
-										{
-											rec.HighHumidex = valDbl;
-											rec.HighHumidexTime = entrydate;
-										}
-									}
-									// no logged humidex available, calculate it
-									else
-									{
-										var humidex = Utils.TempCToUser(MeteoLib.Humidex(Utils.UserTempToC(outsidetemp), hum));
-										if (humidex > rec.HighHumidex)
-										{
-											rec.HighHumidex = humidex;
-											rec.HighHumidexTime = entrydate;
-										}
-									}
-
-									// hi temp
-									if (outsidetemp > rec.HighTemp)
-									{
-										rec.HighTemp = outsidetemp;
-										rec.HighTempTime = entrydate;
-									}
-									// lo temp
-									if (outsidetemp < rec.LowTemp)
-									{
-										rec.LowTemp = outsidetemp;
-										rec.LowTempTime = entrydate;
-									}
-									// hi dewpoint
-									if (dewpoint > rec.HighDewPoint)
-									{
-										rec.HighDewPoint = dewpoint;
-										rec.HighDewPointTime = entrydate;
-									}
-									// low dewpoint
-									if (dewpoint < rec.LowDewPoint)
-									{
-										rec.LowDewPoint = dewpoint;
-										rec.LowDewPointTime = entrydate;
-									}
-									// hi hum
-									if (hum > rec.HighHumidity)
-									{
-										rec.HighHumidity = hum;
-										rec.HighHumidityTime = entrydate;
-									}
-									// lo hum
-									if (hum < rec.LowHumidity)
-									{
-										rec.LowHumidity = hum;
-										rec.LowHumidityTime = entrydate;
-									}
-									// hi baro
-									if (pressure > rec.HighPress)
-									{
-										rec.HighPress = pressure;
-										rec.HighPressTime = entrydate;
-									}
-									// lo hum
-									if (pressure < rec.LowPress)
-									{
-										rec.LowPress = pressure;
-										rec.LowPressTime = entrydate;
-									}
-									// hi gust
-									if (gust > rec.HighGust)
-									{
-										rec.HighGust = gust;
-										rec.HighGustTime = entrydate;
+										// hi humidex
 										idx = 28;
-										if (st.Count > idx && int.TryParse(st[idx], out valInt))
+										if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
 										{
-											rec.HighGustBearing = valInt;
+											if (valDbl > rec.HighHumidex)
+											{
+												rec.HighHumidex = valDbl;
+												rec.HighHumidexTime = entrydate;
+											}
 										}
-										else // have to use the average bearing
+										// no logged humidex available, calculate it
+										else
 										{
-											rec.HighGustBearing = avgbearing;
+											var humidex = Utils.TempCToUser(MeteoLib.Humidex(Utils.UserTempToC(outsidetemp), hum));
+											if (humidex > rec.HighHumidex)
+											{
+												rec.HighHumidex = humidex;
+												rec.HighHumidexTime = entrydate;
+											}
 										}
-									}
-									// hi wind
-									if (speed > rec.HighAvgWind)
-									{
-										rec.HighAvgWind = speed;
-										rec.HighAvgWindTime = entrydate;
-									}
-									// hi rain rate
-									if (rainrate > rec.HighRainRate)
-									{
-										rec.HighRainRate = rainrate;
-										rec.HighRainRateTime = entrydate;
-									}
-									// total rain - just take the last value - the user may have edited the value during the day
-									rec.TotalRain = raintoday * cumulus.CalibRainMult;
 
-									// add last hours rain - the first record of the day has already been added as the last record of the previous day
-									if (entrydate > startTime)
-									{
-										AddLastHoursRainEntry(entrydate, raincounter, ref rain1hLog, ref rain24hLog);
-									}
-
-									// rainfall in last hour
-									rainThisHour = Math.Round((rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
-									if (rainThisHour > rec.HighHourlyRain)
-									{
-										rec.HighHourlyRain = rainThisHour;
-										rec.HighHourlyRainTime = entrydate;
-									}
-
-									// rainfall in last 24 hours
-									rainLast24Hr = Math.Round((rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
-									if (rainLast24Hr > rec.HighRain24h)
-									{
-										rec.HighRain24h = rainLast24Hr;
-										rec.HighRain24hTime = entrydate;
-									}
-									// tot up wind run
-									rec.WindRun += entrydate.Subtract(lastentrydate).TotalHours * speed;
-
-									// average temp values
-									var intervalMins = entrydate.Subtract(lastentrydate).TotalMinutes;
-									totalMins += intervalMins;
-									totalTemp += intervalMins * (outsidetemp + lasttempvalue) / 2;
-
-									// dominate wind direction values
-									totalwinddirX += (speed * Math.Sin((avgbearing * (Math.PI / 180))));
-									totalwinddirY += (speed * Math.Cos((avgbearing * (Math.PI / 180))));
-
-									// heating/cooling degree days
-									if (outsidetemp < cumulus.NOAAheatingthreshold)
-									{
-										if (rec.HeatingDegreeDays == -9999)
+										// hi temp
+										if (outsidetemp > rec.HighTemp)
 										{
-											rec.HeatingDegreeDays = 0;
+											rec.HighTemp = outsidetemp;
+											rec.HighTempTime = entrydate;
 										}
-										rec.HeatingDegreeDays += (((cumulus.NOAAheatingthreshold - outsidetemp) * intervalMins) / 1440);
-									}
-									else if (outsidetemp > cumulus.NOAAcoolingthreshold)
-									{
-										if (rec.CoolingDegreeDays == -9999)
+										// lo temp
+										if (outsidetemp < rec.LowTemp)
 										{
-											rec.CoolingDegreeDays = 0;
+											rec.LowTemp = outsidetemp;
+											rec.LowTempTime = entrydate;
 										}
-										rec.CoolingDegreeDays += (((outsidetemp - cumulus.NOAAcoolingthreshold) * intervalMins) / 1440);
-									}
-
-									// chill hours
-									if (outsidetemp < cumulus.ChillHourThreshold)
-									{
-										TotalChillHours += intervalMins / 60.0;
-									}
-									rec.ChillHours = TotalChillHours;
-
-									// data for ET
-									if (st.Count >= 21)
-									{
-										idx = 18;
-										int? solarRad = int.TryParse(st[idx], out var i) ? i : null;
-										idx = 22;
-										int? solarMax = int.TryParse(st[idx], out i) ? i : null;
-
-										if (!CurrentWeatherData.TryAdd(entrydate, new WeatherData()
+										// hi dewpoint
+										if (dewpoint > rec.HighDewPoint)
 										{
-											Temp = outsidetemp,
-											Humidity = hum,
-											WindSpeed = speed,
-											Pressure = pressure,
-											SolarRad = solarRad,
-											SolarMax = solarMax
-										}))
-										{
-											// normally this is a DST coming off error when 1 hours data is entered twice
-											LogMessage($"Error adding ET weather data for {entrydate}, duplicate entry");
+											rec.HighDewPoint = dewpoint;
+											rec.HighDewPointTime = entrydate;
 										}
-									}
+										// low dewpoint
+										if (dewpoint < rec.LowDewPoint)
+										{
+											rec.LowDewPoint = dewpoint;
+											rec.LowDewPointTime = entrydate;
+										}
+										// hi hum
+										if (hum > rec.HighHumidity)
+										{
+											rec.HighHumidity = hum;
+											rec.HighHumidityTime = entrydate;
+										}
+										// lo hum
+										if (hum < rec.LowHumidity)
+										{
+											rec.LowHumidity = hum;
+											rec.LowHumidityTime = entrydate;
+										}
+										// hi baro
+										if (pressure > rec.HighPress)
+										{
+											rec.HighPress = pressure;
+											rec.HighPressTime = entrydate;
+										}
+										// lo hum
+										if (pressure < rec.LowPress)
+										{
+											rec.LowPress = pressure;
+											rec.LowPressTime = entrydate;
+										}
+										// hi gust
+										if (gust > rec.HighGust)
+										{
+											rec.HighGust = gust;
+											rec.HighGustTime = entrydate;
+											idx = 28;
+											if (st.Count > idx && int.TryParse(st[idx], out valInt))
+											{
+												rec.HighGustBearing = valInt;
+											}
+											else // have to use the average bearing
+											{
+												rec.HighGustBearing = avgbearing;
+											}
+										}
+										// hi wind
+										if (speed > rec.HighAvgWind)
+										{
+											rec.HighAvgWind = speed;
+											rec.HighAvgWindTime = entrydate;
+										}
+										// hi rain rate
+										if (rainrate > rec.HighRainRate)
+										{
+											rec.HighRainRate = rainrate;
+											rec.HighRainRateTime = entrydate;
+										}
+										// total rain - just take the last value - the user may have edited the value during the day
+										rec.TotalRain = raintoday * cumulus.CalibRainMult;
 
-									if (lastentryHour < entrydate.Hour)
+										// add last hours rain - the first record of the day has already been added as the last record of the previous day
+										if (entrydate > startTime)
+										{
+											AddLastHoursRainEntry(entrydate, raincounter, ref rain1hLog, ref rain24hLog);
+										}
+
+										// rainfall in last hour
+										rainThisHour = Math.Round((rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
+										if (rainThisHour > rec.HighHourlyRain)
+										{
+											rec.HighHourlyRain = rainThisHour;
+											rec.HighHourlyRainTime = entrydate;
+										}
+
+										// rainfall in last 24 hours
+										rainLast24Hr = Math.Round((rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
+										if (rainLast24Hr > rec.HighRain24h)
+										{
+											rec.HighRain24h = rainLast24Hr;
+											rec.HighRain24hTime = entrydate;
+										}
+										// tot up wind run
+										rec.WindRun += entrydate.Subtract(lastentrydate).TotalHours * speed;
+
+										// average temp values
+										var intervalMins = entrydate.Subtract(lastentrydate).TotalMinutes;
+										totalMins += intervalMins;
+										totalTemp += intervalMins * (outsidetemp + lasttempvalue) / 2;
+
+										// dominate wind direction values
+										totalwinddirX += (speed * Math.Sin((avgbearing * (Math.PI / 180))));
+										totalwinddirY += (speed * Math.Cos((avgbearing * (Math.PI / 180))));
+
+										// heating/cooling degree days
+										if (outsidetemp < cumulus.NOAAheatingthreshold)
+										{
+											if (rec.HeatingDegreeDays == -9999)
+											{
+												rec.HeatingDegreeDays = 0;
+											}
+											rec.HeatingDegreeDays += (((cumulus.NOAAheatingthreshold - outsidetemp) * intervalMins) / 1440);
+										}
+										else if (outsidetemp > cumulus.NOAAcoolingthreshold)
+										{
+											if (rec.CoolingDegreeDays == -9999)
+											{
+												rec.CoolingDegreeDays = 0;
+											}
+											rec.CoolingDegreeDays += (((outsidetemp - cumulus.NOAAcoolingthreshold) * intervalMins) / 1440);
+										}
+
+										// chill hours
+										if (outsidetemp < cumulus.ChillHourThreshold)
+										{
+											TotalChillHours += intervalMins / 60.0;
+										}
+										rec.ChillHours = TotalChillHours;
+
+										// data for ET
+										if (st.Count >= 21)
+										{
+											idx = 18;
+											int? solarRad = int.TryParse(st[idx], out var i) ? i : null;
+											idx = 22;
+											int? solarMax = int.TryParse(st[idx], out i) ? i : null;
+
+											if (!CurrentWeatherData.TryAdd(entrydate, new WeatherData()
+											{
+												Temp = outsidetemp,
+												Humidity = hum,
+												WindSpeed = speed,
+												Pressure = pressure,
+												SolarRad = solarRad,
+												SolarMax = solarMax
+											}))
+											{
+												// normally this is a DST coming off error when 1 hours data is entered twice
+												LogMessage($"Error adding ET weather data for {entrydate}, duplicate entry");
+											}
+										}
+
+										if (lastentryHour < entrydate.Hour)
+										{
+											lastentryHour = entrydate.Hour;
+
+											// get the averages for ET
+											var etData = CurrentWeatherData.GetAverages(lastentrydate);
+											if (etData != null)
+											{
+												rec.ET += Utils.RainMMToUser(
+													MeteoLib.Evapotranspiration(
+														Utils.UserTempToC(etData.Temp.Value),
+														etData.Humidity.Value,
+														etData.SolarRad.Value,
+														etData.SolarMax.Value,
+														Utils.UserWindToMS(etData.WindSpeed.Value),
+														Utils.UserPressToKpa(etData.Pressure.Value)
+														)
+													);
+											}
+										}
+
+
+										lastentryrain = raintoday;
+										lastentrycounter = raincounter;
+										lasttempvalue = outsidetemp;
+										lastentrydate = entrydate;
+										continue;
+									}
+									else // we are outside the time range of the current day
 									{
-										lastentryHour = entrydate.Hour;
+										// These values need to include the last record for completeness
+
+										// tot up wind run
+										rec.WindRun += entrydate.Subtract(lastentrydate).TotalHours * speed;
+
+										// average temp values
+										var intervalMins = entrydate.Subtract(lastentrydate).TotalMinutes;
+										totalMins += intervalMins;
+										totalTemp += intervalMins * (outsidetemp + lasttempvalue) / 2;
+
+										// dominant wind direction values
+										totalwinddirX += (speed * Math.Sin((avgbearing * (Math.PI / 180))));
+										totalwinddirY += (speed * Math.Cos((avgbearing * (Math.PI / 180))));
+
+										// heating/cooling degree days
+										if (outsidetemp < cumulus.NOAAheatingthreshold)
+										{
+											if (rec.HeatingDegreeDays == -9999)
+											{
+												rec.HeatingDegreeDays = 0;
+											}
+											rec.HeatingDegreeDays += (((cumulus.NOAAheatingthreshold - outsidetemp) * intervalMins) / 1440);
+										}
+										else if (outsidetemp > cumulus.NOAAcoolingthreshold)
+										{
+											if (rec.CoolingDegreeDays == -9999)
+											{
+												rec.CoolingDegreeDays = 0;
+											}
+											rec.CoolingDegreeDays += (((outsidetemp - cumulus.NOAAcoolingthreshold) * intervalMins) / 1440);
+										}
+
+										// chill hours
+										if (outsidetemp < cumulus.ChillHourThreshold)
+										{
+											TotalChillHours += intervalMins / 60.0;
+										}
+										rec.ChillHours = TotalChillHours;
+
+
+										// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
+										// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
+										// after that build the total was reset to zero in the 00:00 entry
+										// messy!
+										// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
+										//var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
+										var rolloverRaincounter = double.Parse(st[11], inv);  // 11 - rain counter
+
+										if (rolloverRaincounter > lastentrycounter)
+										{
+											rec.TotalRain += (rolloverRaincounter - lastentrycounter) * cumulus.CalibRainMult;
+										}
+
+
+										//if (rolloverRain > 0)
+										//{
+										//	raintoday = lastentryrain + rolloverRain;
+										//}
+										//if (rolloverRain == 0 && (raincounter - lastentrycounter > 0) && (raincounter - lastentrycounter < counterJumpTooBig))
+										//{
+										//	raintoday += (raincounter - lastentrycounter) * cumulus.CalibRainMult;
+										//}
+
+										// add last hours rain for this last record.
+										AddLastHoursRainEntry(entrydate, rolloverRaincounter, ref rain1hLog, ref rain24hLog);
+
+										// rainfall in last hour
+										rainThisHour = Math.Round((rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
+										if (rainThisHour > rec.HighHourlyRain)
+										{
+											rec.HighHourlyRain = rainThisHour;
+											rec.HighHourlyRainTime = entrydate;
+										}
+
+										rainLast24Hr = Math.Round((rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
+										if (rainLast24Hr > rec.HighRain24h)
+										{
+											rec.HighRain24h = rainLast24Hr;
+											rec.HighRain24hTime = entrydate.AddMinutes(-1); // we want the high rate for the day to be at the end of the day we are closing
+										}
+
+										// total rain
+										totalRainfall += rec.TotalRain;
+										lastentrycounter = raincounter;
 
 										// get the averages for ET
 										var etData = CurrentWeatherData.GetAverages(lastentrydate);
@@ -827,147 +940,46 @@ namespace CreateMissing
 													)
 												);
 										}
+
+										// flag we are done with this record
+										finished = true;
 									}
-
-
-									lastentryrain = raintoday;
-									lastentrycounter = raincounter;
-									lasttempvalue = outsidetemp;
-									lastentrydate = entrydate;
-									continue;
 								}
-								else // we are outside the time range of the current day
+
+
+								if (started && recCount >= 5) // need at least five records to create a day
 								{
-									// These values need to include the last record for completeness
+									// we were in the right day, now we aren't
+									// calc average temp for the day, edge case we only have one record, in which case the totals will be zero, use hi or lo temp, they will be the same!
+									rec.AvgTemp = totalMins > 0 ? totalTemp / totalMins : rec.HighTemp;
 
-									// tot up wind run
-									rec.WindRun += entrydate.Subtract(lastentrydate).TotalHours * speed;
+									// calc dominant wind direction for the day
+									rec.DominantWindBearing = Utils.CalcAvgBearing(totalwinddirX, totalwinddirY);
 
-									// average temp values
-									var intervalMins = entrydate.Subtract(lastentrydate).TotalMinutes;
-									totalMins += intervalMins;
-									totalTemp += intervalMins * (outsidetemp + lasttempvalue) / 2;
-
-									// dominant wind direction values
-									totalwinddirX += (speed * Math.Sin((avgbearing * (Math.PI / 180))));
-									totalwinddirY += (speed * Math.Cos((avgbearing * (Math.PI / 180))));
-
-									// heating/cooling degree days
-									if (outsidetemp < cumulus.NOAAheatingthreshold)
-									{
-										if (rec.HeatingDegreeDays == -9999)
-										{
-											rec.HeatingDegreeDays = 0;
-										}
-										rec.HeatingDegreeDays += (((cumulus.NOAAheatingthreshold - outsidetemp) * intervalMins) / 1440);
-									}
-									else if (outsidetemp > cumulus.NOAAcoolingthreshold)
-									{
-										if (rec.CoolingDegreeDays == -9999)
-										{
-											rec.CoolingDegreeDays = 0;
-										}
-										rec.CoolingDegreeDays += (((outsidetemp - cumulus.NOAAcoolingthreshold) * intervalMins) / 1440);
-									}
-
-									// chill hours
-									if (outsidetemp < cumulus.ChillHourThreshold)
-									{
-										TotalChillHours += intervalMins / 60.0;
-									}
-									rec.ChillHours = TotalChillHours;
-
-
-									// logging format changed on with C1 v1.9.3 b1055 in Dec 2012
-									// before that date the 00:00 log entry contained the rain total for the day before and the next log entry was reset to zero
-									// after that build the total was reset to zero in the 00:00 entry
-									// messy!
-									// no final rainfall entry after this date (approx). The best we can do is add in the increase in rain counter during this preiod
-									//var rolloverRain = double.Parse(st[9]);          // 9 - rain so far today
-									var rolloverRaincounter = double.Parse(st[11], inv);  // 11 - rain counter
-
-									if (rolloverRaincounter > lastentrycounter)
-									{
-										rec.TotalRain += (rolloverRaincounter - lastentrycounter) * cumulus.CalibRainMult;
-									}
-
-
-									//if (rolloverRain > 0)
-									//{
-									//	raintoday = lastentryrain + rolloverRain;
-									//}
-									//if (rolloverRain == 0 && (raincounter - lastentrycounter > 0) && (raincounter - lastentrycounter < counterJumpTooBig))
-									//{
-									//	raintoday += (raincounter - lastentrycounter) * cumulus.CalibRainMult;
-									//}
-
-									// add last hours rain for this last record.
-									AddLastHoursRainEntry(entrydate, rolloverRaincounter, ref rain1hLog, ref rain24hLog);
-
-									// rainfall in last hour
-									rainThisHour = Math.Round((rain1hLog.Last().Raincounter - rain1hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
-									if (rainThisHour > rec.HighHourlyRain)
-									{
-										rec.HighHourlyRain = rainThisHour;
-										rec.HighHourlyRainTime = entrydate;
-									}
-
-									rainLast24Hr = Math.Round((rain24hLog.Last().Raincounter - rain24hLog.Peek().Raincounter) * cumulus.CalibRainMult, cumulus.Units.RainDPlaces);
-									if (rainLast24Hr > rec.HighRain24h)
-									{
-										rec.HighRain24h = rainLast24Hr;
-										rec.HighRain24hTime = entrydate.AddMinutes(-1); // we want the high rate for the day to be at the end of the day we are closing
-									}
-
-									// total rain
-									totalRainfall += rec.TotalRain;
-									lastentrycounter = raincounter;
-
-									// get the averages for ET
-									var etData = CurrentWeatherData.GetAverages(lastentrydate);
-									if (etData != null)
-									{
-										rec.ET += Utils.RainMMToUser(
-											MeteoLib.Evapotranspiration(
-												Utils.UserTempToC(etData.Temp.Value),
-												etData.Humidity.Value,
-												etData.SolarRad.Value,
-												etData.SolarMax.Value,
-												Utils.UserWindToMS(etData.WindSpeed.Value),
-												Utils.UserPressToKpa(etData.Pressure.Value)
-												)
-											);
-									}
-
-									// flag we are done with this record
-									finished = true;
+									return rec;
 								}
+								else if (started && recCount <= 5)
+								{
+									// Oh dear, we have done the day and have less than five records
+									return null;
+								}
+								else if (!started && entrydate > endTime)
+								{
+									// We didn't find any data
+									return null;
+								}
+
+								lastentrydate = entrydate;
 							}
-
-
-							if (started && recCount >= 5) // need at least five records to create a day
+							else
 							{
-								// we were in the right day, now we aren't
-								// calc average temp for the day, edge case we only have one record, in which case the totals will be zero, use hi or lo temp, they will be the same!
-								rec.AvgTemp = totalMins > 0 ? totalTemp / totalMins : rec.HighTemp;
-
-								// calc dominant wind direction for the day
-								rec.DominantWindBearing = Utils.CalcAvgBearing(totalwinddirX, totalwinddirY);
-
-								return rec;
+								LogMessage($"LogFile: Error at line {CurrentLogLineNum}, field 2 of {fileName} : Invalid Unix timestamp");
+								LogMessage("LogFile: Please edit the file to correct the error");
+								LogMessage("LogFile: Line = " + CurrentLogLines[CurrentLogLineNum - 1]);
+								LogConsole($"Error at line {CurrentLogLineNum}, field 2 of {fileName} : Invalid Unix timestamp", ConsoleColor.Red);
+								LogConsole("Please edit the file to correct the error", ConsoleColor.Red);
+								Environment.Exit(1);
 							}
-							else if (started && recCount <= 5)
-							{
-								// Oh dear, we have done the day and have less than five records
-								return null;
-							}
-							else if (!started && entrydate > endTime)
-							{
-								// We didn't find any data
-								return null;
-							}
-
-							lastentrydate = entrydate;
 						} // end while
 					}
 					catch (Exception e)
@@ -1113,7 +1125,6 @@ namespace CreateMissing
 								continue;
 							}
 
-							// Regex is very expensive, let's assume the separator is always a single character
 							var ut = new List<string>(CurrentSolarLogLines[CurrentSolarLogLineNum].Split(','));
 
 							if (ut.Count < 10)
@@ -1126,23 +1137,34 @@ namespace CreateMissing
 
 							try
 							{
-								var entrydate = Utils.DdmmyyhhmmStrToDate(ut[0], ut[1]);
+								if (long.TryParse(ut[1], out var ts))
+								{
+									var entrydate = ts.FromUnixTime();
 
-								// Solar for 9am days is 00:00 the previous day to midnight the current day!
-								if (entrydate > solarStartTime && entrydate <= solarEndTime)
-								{
-									// we are just getting the solar values to midnight
-									ExtractSolarData(ut, ref rec, entrydate);
-									started = true;
-								}
-								else if (started)
-								{
-									if (CurrentSolarLogLineNum > 0)
+									// Solar for 9am days is 00:00 the previous day to midnight the current day!
+									if (entrydate > solarStartTime && entrydate <= solarEndTime)
 									{
-										CurrentSolarLogLineNum--;
+										// we are just getting the solar values to midnight
+										ExtractSolarData(ut, ref rec, entrydate);
+										started = true;
 									}
+									else if (started)
+									{
+										if (CurrentSolarLogLineNum > 0)
+										{
+											CurrentSolarLogLineNum--;
+										}
 
-									return rec;
+										return rec;
+									}
+								}
+								else
+								{
+									LogMessage($"Solar: Error at line {CurrentSolarLogLineNum + 1}, field 2 of {fileName} : Invalid timestamp");
+									LogMessage("Solar: Line = " + CurrentSolarLogLines[CurrentSolarLogLineNum]);
+									LogConsole($"Error at line {CurrentSolarLogLineNum + 1}, field 2 of {fileName} : Invalid timestamp", ConsoleColor.Red);
+									LogConsole("Please edit the file to correct the error", ConsoleColor.Red);
+									Environment.Exit(1);
 								}
 							}
 							catch (IndexOutOfRangeException ex)
