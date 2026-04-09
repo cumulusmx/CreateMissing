@@ -7,6 +7,9 @@ Alternatively view it [online on GitHub](https://github.com/cumulusmx/CreateMiss
 
 ---
 
+## [3.0.0][5] - 2026-03-27
+- Initial release for .NET 10
+
 ## [2.1.0][4] - 2025-07-20
 - Add the ability to calculate daily ET
 
