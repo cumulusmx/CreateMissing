@@ -7,7 +7,8 @@ Alternatively view it [online on GitHub](https://github.com/cumulusmx/CreateMiss
 
 ---
 
-
+## [3.1.0][6] - 2026-04-30
+- Adds support for BGT/WBGT values
 
 ## [3.0.0][5] - 2026-03-27
 - Initial release for .NET 10
@@ -33,3 +34,4 @@ Alternatively view it [online on GitHub](https://github.com/cumulusmx/CreateMiss
 [3]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.0.3
 [4]: https://github.com/cumulusmx/CreateMissing/releases/tag/v2.1.0
 [5]: https://github.com/cumulusmx/CreateMissing/releases/tag/v3.0.0
+[6]: https://github.com/cumulusmx/CreateMissing/releases/tag/v3.1.0

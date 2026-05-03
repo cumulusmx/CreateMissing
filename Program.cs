@@ -1,4 +1,5 @@
 ﻿using CumulusMX;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -31,7 +32,7 @@ namespace CreateMissing
 
 		private static double TotalChillHours;
 
-		private static WeatherDataDict CurrentWeatherData = new WeatherDataDict();
+		private static readonly WeatherDataDict CurrentWeatherData = [];
 
 		static void Main()
 		{
@@ -387,6 +388,8 @@ namespace CreateMissing
 			// 26  Rain since midnight
 			// 27  Feels like
 			// 28  Humidex
+			// 29  BGT
+			// 30  WBGT
 
 
 			while (!finished)
@@ -648,6 +651,28 @@ namespace CreateMissing
 											{
 												rec.HighHumidex = humidex;
 												rec.HighHumidexTime = entrydate;
+											}
+										}
+
+										// hi BGT
+										idx = 29;
+										if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
+										{
+											if (valDbl > rec.HighBgt)
+											{
+												rec.HighBgt = valDbl;
+												rec.HighBgtTime = entrydate;
+											}
+										}
+
+										// hi WBGT
+										idx = 30;
+										if (st.Count > idx && double.TryParse(st[idx], inv, out valDbl))
+										{
+											if (valDbl > rec.HighWbgt)
+											{
+												rec.HighWbgt = valDbl;
+												rec.HighWbgtTime = entrydate;
 											}
 										}
 

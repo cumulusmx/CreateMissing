@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace CumulusMX
+namespace CreateMissing
 {
 	internal class MeteoLib
 	{

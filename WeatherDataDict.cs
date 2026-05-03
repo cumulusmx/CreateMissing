@@ -15,7 +15,7 @@ namespace CreateMissing
 				.Select(kvp => kvp.Value)
 				.ToList();
 
-			if (dataForHour.Any())
+			if (dataForHour.Count != 0)
 			{
 				return new WeatherData
 				{

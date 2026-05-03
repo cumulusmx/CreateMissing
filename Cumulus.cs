@@ -1,5 +1,4 @@
-﻿using CumulusMX;
-using System;
+﻿using System;
 using System.Globalization;
 
 namespace CreateMissing
@@ -30,12 +29,15 @@ namespace CreateMissing
 
 		public DateTime RecordsBeganDateTime;
 
-		private readonly StationOptions StationOptions = new StationOptions();
-		internal StationUnits Units = new StationUnits();
-		private readonly int[] WindDPlaceDefaults = { 1, 0, 0, 0 }; // m/s, mph, km/h, knots
-		private readonly int[] TempDPlaceDefaults = { 1, 1 };
-		private readonly int[] PressDPlaceDefaults = { 1, 1, 2 };
-		private readonly int[] RainDPlaceDefaults = { 1, 2 };
+		private readonly StationOptions StationOptions = new();
+		internal StationUnits Units = new();
+		private readonly int[] WindDPlaceDefaults = [1, 0, 0, 0]; // m/s, mph, km/h, knots
+		private readonly int[] TempDPlaceDefaults = [1, 1];
+		private readonly int[] PressDPlaceDefaults = [1, 1, 2];
+		private readonly int[] RainDPlaceDefaults = [1, 2];
+
+		public const int DefaultHiVal = -9999;
+		public const int DefaultLoVal = 9999;
 
 		public Cumulus()
 		{
