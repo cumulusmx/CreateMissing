@@ -342,7 +342,7 @@ namespace CreateMissing
 				strb.Append(sep + rec.AvgTemp.ToString(Program.cumulus.TempFormat, inv));
 
 
-			strb.Append(rec.WindRun.ToString("F1", inv)); // zero value for missing
+			strb.Append(sep + rec.WindRun.ToString("F1", inv)); // zero value for missing
 
 			if (rec.HighAvgWind == Cumulus.DefaultHiVal)
 				strb.Append(sepX2);
@@ -415,8 +415,8 @@ namespace CreateMissing
 				strb.Append(sepX2);
 			else
 			{
-				strb.Append(rec.HighDewPoint.ToString(Program.cumulus.TempFormat, inv));
-				strb.Append(rec.HighDewPointTime.ToString("HH:mm", inv));
+				strb.Append(sep + rec.HighDewPoint.ToString(Program.cumulus.TempFormat, inv));
+				strb.Append(sep + rec.HighDewPointTime.ToString("HH:mm", inv));
 			}
 
 			if (rec.LowDewPoint == Cumulus.DefaultHiVal)
